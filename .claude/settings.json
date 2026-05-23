@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php --version)",
+      "Bash(composer --version)",
+      "Bash(mysql --version)",
+      "Bash(redis-cli --version)",
+      "Read(//c/xampp/mysql/bin//**)",
+      "Read(//c/laragon/bin/**)",
+      "Read(//c/Program Files/**)",
+      "Read(//c//**)",
+      "Bash(/c/xampp/mysql/bin/mysql.exe --version)",
+      "Bash(/c/xampp/mysql/bin/mysqladmin.exe -u root ping)",
+      "Bash(mv \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/BACKEND_README.md\" \"/c/Users/Lanre/cache/cache data/Delovox/BACKEND_README_TEMP.md\" && echo \"README moved successfully\")",
+      "Bash(composer create-project *)",
+      "Bash(mv \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/.claude\" \"/c/Users/Lanre/cache/cache data/Delovox/.claude_TEMP\" && echo \"Moved .claude\" && ls -la \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/\")",
+      "Bash(xargs -0 -I{} cp -r {} \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Lanre\\cache\\cache data\\Delovox",
+      "C:\\Users\\Lanre\\cache\\cache data\\Delovox\\Statra Backend\\.claude"
+    ]
+  }
+}
