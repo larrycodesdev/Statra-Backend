@@ -1,0 +1,122 @@
+<?php
+
+namespace App\Http\Controllers\Doctor;
+
+use App\Http\Controllers\Controller;
+use App\Http\Responses\ApiResponse;
+use App\Models\Doctor;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
+
+class AuthController extends Controller
+{
+    public function register(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name'            => ['required', 'string', 'max:255'],
+            'email'           => ['required', 'email', 'unique:users,email'],
+            'password'        => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
+            'phone'           => ['nullable', 'string', 'max:20'],
+            'hospital_name'   => ['nullable', 'string', 'max:255'],
+            'department'      => ['nullable', 'string', 'max:255'],
+            'specialisation'  => ['nullable', 'string', 'max:255'],
+            'license_number'  => ['nullable', 'string', 'max:100', 'unique:doctors,license_number'],
+        ]);
+
+        $user = User::create([
+            'name'     => $data['name'],
+            'email'    => $data['email'],
+            'password' => Hash::make($data['password']),
+            'role'     => 'doctor',
+            'phone'    => $data['phone'] ?? null,
+        ]);
+
+        Doctor::create([
+            'user_id'        => $user->id,
+            'hospital_name'  => $data['hospital_name'] ?? null,
+            'department'     => $data['department'] ?? null,
+            'specialisation' => $data['specialisation'] ?? null,
+            'license_number' => $data['license_number'] ?? null,
+        ]);
+
+        $token = $user->createToken('web-dashboard', ['doctor'])->plainTextToken;
+
+        return ApiResponse::created([
+            'token' => $token,
+            'user'  => $this->userResource($user),
+        ], 'Doctor registration successful.');
+    }
+
+    public function login(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = User::where('email', $data['email'])->where('role', 'doctor')->first();
+
+        if (!$user || !Hash::check($data['password'], $user->password)) {
+            return ApiResponse::error('Invalid credentials.', 401);
+        }
+
+        $token = $user->createToken('web-dashboard', ['doctor'])->plainTextToken;
+
+        return ApiResponse::success([
+            'token' => $token,
+            'user'  => $this->userResource($user),
+        ], 'Login successful.');
+    }
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate(['email' => ['required', 'email']]);
+
+        Password::sendResetLink($request->only('email'));
+
+        return ApiResponse::success(null, 'If that email exists, a reset link has been sent.');
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'token'    => ['required', 'string'],
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
+        ]);
+
+        $status = Password::reset($data, function (User $user, string $password) {
+            $user->update(['password' => Hash::make($password)]);
+            $user->tokens()->delete();
+        });
+
+        if ($status !== Password::PasswordReset) {
+            return ApiResponse::error('Invalid or expired reset token.', 400);
+        }
+
+        return ApiResponse::success(null, 'Password reset successfully.');
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return ApiResponse::success(null, 'Logged out successfully.');
+    }
+
+    private function userResource(User $user): array
+    {
+        return [
+            'id'    => $user->id,
+            'uuid'  => $user->uuid,
+            'name'  => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'role'  => $user->role,
+        ];
+    }
+}

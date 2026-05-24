@@ -13,12 +13,7 @@
       "Bash(/c/xampp/mysql/bin/mysqladmin.exe -u root ping)",
       "Bash(mv \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/BACKEND_README.md\" \"/c/Users/Lanre/cache/cache data/Delovox/BACKEND_README_TEMP.md\" && echo \"README moved successfully\")",
       "Bash(composer create-project *)",
-      "Bash(mv \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/.claude\" \"/c/Users/Lanre/cache/cache data/Delovox/.claude_TEMP\" && echo \"Moved .claude\" && ls -la \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/\")",
-      "Bash(xargs -0 -I{} cp -r {} \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/\")",
-      "Bash(mv \"/c/Users/Lanre/cache/cache data/Delovox/.claude_TEMP\" \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/.claude\")",
-      "Bash(rm -rf /c/Users/Lanre/cache/laravel_init)",
-      "Bash(composer require *)",
-      "Bash(/c/xampp/mysql/bin/mysql.exe -u root -e \"CREATE DATABASE IF NOT EXISTS scd_wellness CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")"
+      "Bash(mv \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/.claude\" \"/c/Users/Lanre/cache/cache data/Delovox/.claude_TEMP\" && echo \"Moved .claude\" && ls -la \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\Lanre\\cache\\cache data\\Delovox",
