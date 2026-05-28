@@ -18,7 +18,8 @@
       "Bash(mv \"/c/Users/Lanre/cache/cache data/Delovox/.claude_TEMP\" \"/c/Users/Lanre/cache/cache data/Delovox/Statra Backend/.claude\")",
       "Bash(rm -rf /c/Users/Lanre/cache/laravel_init)",
       "Bash(composer require *)",
-      "Bash(/c/xampp/mysql/bin/mysql.exe -u root -e \"CREATE DATABASE IF NOT EXISTS scd_wellness CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")"
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root -e \"CREATE DATABASE IF NOT EXISTS scd_wellness CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
+      "Bash(curl -s http://localhost:8000/up)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Lanre\\cache\\cache data\\Delovox",

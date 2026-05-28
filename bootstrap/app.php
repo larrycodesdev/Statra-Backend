@@ -26,9 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'patient' => EnsureIsPatient::class,
             'doctor'  => EnsureIsDoctor::class,
+
+            'ability'   => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
+            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         ]);
 
-        // Ensure JSON responses for all API errors (important for Flutter clients)
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
