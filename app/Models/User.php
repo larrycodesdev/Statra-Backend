@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -15,7 +16,9 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
-        'uuid', 'name', 'email', 'password',
+        'uuid', 'name',
+        'first_name', 'last_name', 'username',
+        'email', 'password',
         'role', 'phone', 'avatar', 'fcm_token',
     ];
 
@@ -27,26 +30,32 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
         ];
     }
 
     protected static function boot(): void
     {
         parent::boot();
-        static::creating(function ($user) {
+        static::creating(function (User $user) {
             if (empty($user->uuid)) {
-                $user->uuid = \Illuminate\Support\Str::uuid()->toString();
+                $user->uuid = Str::uuid()->toString();
             }
         });
     }
 
-    public function patient()
+    // Always returns full name from first+last (falls back to stored name)
+    public function getFullNameAttribute(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}") ?: ($this->name ?? '');
+    }
+
+    public function patient(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Patient::class);
     }
 
-    public function doctor()
+    public function doctor(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Doctor::class);
     }
