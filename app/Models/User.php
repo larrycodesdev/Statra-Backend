@@ -60,6 +60,11 @@ class User extends Authenticatable
         return $this->hasOne(Doctor::class);
     }
 
+    public function checkIns(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CheckIn::class);
+    }
+
     public function isPatient(): bool
     {
         return $this->role === 'patient';

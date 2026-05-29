@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')
                 ->prefix('api/v1/doctor')
                 ->group(base_path('routes/api_doctor.php'));
+
+            Route::middleware('api')
+                ->prefix('api/v1/checkin')
+                ->group(base_path('routes/api_checkin.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
