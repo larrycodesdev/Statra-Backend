@@ -1,0 +1,270 @@
+openapi: 3.0.0
+info:
+  title: "STATRA — Check-in Web App API"
+  version: "1.0.0"
+  description: |
+    API for the STATRA Sickle Cell Check-in web app.
+    Users log in with **username + password**.
+    All check-in submissions are risk-scored **server-side** — the client sends raw inputs only, never scores.
+  contact:
+    email: api@scdwellness.app
+
+servers:
+  - url: http://localhost:8000
+    description: Local dev
+  - url: https://api.scdwellness.app
+    description: Production
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+  schemas:
+    LoginResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: "Login successful." }
+        data:
+          type: object
+          properties:
+            token:    { type: string, example: "1|abc123..." }
+            name:     { type: string, example: "Sarah Adeyemi" }
+            username: { type: string, example: "nurse01" }
+
+    CheckInResult:
+      type: object
+      properties:
+        id:           { type: integer, example: 1 }
+        pid:          { type: string,  example: "SCD-001" }
+        name:         { type: string,  example: "Jane Johnson" }
+        genotype:     { type: string,  example: "SS" }
+        meds:         { type: string,  example: "Yes" }
+        pain:         { type: integer, example: 7 }
+        fatigue:      { type: string,  example: "High" }
+        sleep:        { type: string,  example: "Poor" }
+        hydration:    { type: string,  example: "Okay" }
+        condition:    { type: string,  example: "Very different" }
+        safety:       { type: string,  example: "None" }
+        notes:        { type: string,  nullable: true }
+        symptoms:     { type: array,   items: { type: string } }
+        flags:        { type: array,   items: { type: string } }
+        triggers:     { type: array,   items: { type: string } }
+        total:        { type: integer, example: 11, description: "999 = OVERRIDE (red flag triggered)" }
+        displayScore: { type: string,  example: "11", description: "'OVERRIDE' or stringified total" }
+        status:
+          type: string
+          enum: [Stable, "Watch closely", Elevated, Urgent]
+          example: Elevated
+        redFlag:  { type: boolean, example: false }
+        reason:   { type: string,  example: "Pain level is the primary risk driver today" }
+        genoMult:
+          type: number
+          format: float
+          example: 1.2
+          description: "SS/SB0=1.2, SB+=1.1, all others=1.0"
+        scores:
+          type: object
+          properties:
+            pain:      { type: number, example: 5 }
+            fatigue:   { type: number, example: 2 }
+            sleep:     { type: number, example: 1 }
+            hydration: { type: number, example: 1 }
+            symptoms:  { type: number, example: 5 }
+            triggers:  { type: number, example: 2 }
+        ts: { type: string, format: date-time }
+
+tags:
+  - name: Auth
+    description: Register, login, logout
+  - name: CheckIn
+    description: Submit and retrieve check-in records
+
+paths:
+
+  # ── AUTH ────────────────────────────────────────────────────────────────────
+
+  /api/v1/checkin/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new check-in user
+      description: Creates a `checkin_user` account. Email is optional.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [username, name, password]
+              properties:
+                username:
+                  type: string
+                  example: nurse01
+                  description: Unique — used for login
+                name:
+                  type: string
+                  example: Sarah Adeyemi
+                password:
+                  type: string
+                  format: password
+                  example: pass123
+                  minLength: 6
+                email:
+                  type: string
+                  format: email
+                  nullable: true
+      responses:
+        "201":
+          description: Registered successfully
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "422":
+          description: Username already taken
+
+  /api/v1/checkin/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [username, password]
+              properties:
+                username: { type: string, example: nurse01 }
+                password: { type: string, format: password, example: pass123 }
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "401":
+          description: Invalid username or password
+
+  /api/v1/checkin/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke current token
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Logged out
+
+  # ── CHECK-IN ─────────────────────────────────────────────────────────────────
+
+  /api/v1/checkin/check-in:
+    post:
+      tags: [CheckIn]
+      summary: Submit a check-in
+      description: |
+        Risk score is **always computed server-side** from the raw inputs.
+        Never send a pre-calculated score — it will be ignored.
+
+        **Red-flag override:** if any value in `flags` matches a red-flag symptom,
+        OR if `safety` is a red-flag symptom, the status is immediately set to `Urgent`
+        and `displayScore` is `OVERRIDE` regardless of other inputs.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [pid, name, genotype, meds, pain, fatigue, sleep, hydration, condition, safety]
+              properties:
+                pid:       { type: string,  example: "SCD-001", description: "Patient ID (hospital or internal)" }
+                name:      { type: string,  example: "Jane Johnson" }
+                genotype:
+                  type: string
+                  enum: [SS, SC, "SB+", SB0, Unknown]
+                  example: SS
+                meds:
+                  type: string
+                  enum: [Yes, No, Missed]
+                  example: Yes
+                pain:      { type: integer, minimum: 0, maximum: 10, example: 7 }
+                fatigue:   { type: string,  enum: [Low, Medium, High],      example: High }
+                sleep:     { type: string,  enum: [Good, Okay, Poor],       example: Poor }
+                hydration: { type: string,  enum: [Good, Okay, Low],        example: Okay }
+                condition:
+                  type: string
+                  enum: ["No, I feel normal", "Slightly different", "Very different"]
+                  example: "Very different"
+                safety:
+                  type: string
+                  example: None
+                  description: "'None' or the exact name of a red-flag symptom — triggers immediate Urgent status"
+                notes:    { type: string, nullable: true }
+                symptoms:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
+                    enum: ["Joint pain", Headache, Dizziness]
+                flags:
+                  type: array
+                  nullable: true
+                  description: Any value here triggers immediate Urgent override
+                  items:
+                    type: string
+                    enum: ["Chest pain", "Shortness of breath", Fever, "Confusion or weakness", "Severe chest pain", "Difficulty breathing"]
+                triggers:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
+                    enum: [Stress, "Physical exertion", "Cold weather exposure", Dehydration, "Illness/infection", "Poor sleep", Travel]
+            example:
+              pid: "SCD-001"
+              name: "Jane Johnson"
+              genotype: SS
+              meds: Yes
+              pain: 7
+              fatigue: High
+              sleep: Poor
+              hydration: Okay
+              condition: "Very different"
+              safety: None
+              symptoms: ["Joint pain", "Headache"]
+              flags: []
+              triggers: ["Dehydration"]
+      responses:
+        "200":
+          description: Check-in submitted — risk result returned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckInResult" }
+        "422":
+          description: Validation error
+
+  /api/v1/checkin/history:
+    get:
+      tags: [CheckIn]
+      summary: Full check-in history for the logged-in user, newest first
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: List of check-in records
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CheckInResult" }
+
+  /api/v1/checkin/check-in/latest:
+    get:
+      tags: [CheckIn]
+      summary: Most recent check-in result for the logged-in user
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Latest check-in record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckInResult" }
+        "404":
+          description: No check-ins yet

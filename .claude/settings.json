@@ -19,7 +19,8 @@
       "Bash(rm -rf /c/Users/Lanre/cache/laravel_init)",
       "Bash(composer require *)",
       "Bash(/c/xampp/mysql/bin/mysql.exe -u root -e \"CREATE DATABASE IF NOT EXISTS scd_wellness CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
-      "Bash(curl -s http://localhost:8000/up)"
+      "Bash(curl -s http://localhost:8000/up)",
+      "Bash(curl -s http://localhost:8000/api/v1/docs/mobile-app.json)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Lanre\\cache\\cache data\\Delovox",
