@@ -3,7 +3,7 @@
 cd /home/site/wwwroot
 
 # Install composer dependencies
-composer install --optimize-autoloader --no-dev
+/usr/local/bin/composer install --no-dev --optimize-autoloader
 
 # Set permissions
 chmod -R 755 storage bootstrap/cache
@@ -12,7 +12,6 @@ chmod -R 755 storage bootstrap/cache
 php artisan config:clear
 php artisan config:cache
 php artisan route:cache
-php artisan view:cache
 
 # Run migrations
 php artisan migrate --force
