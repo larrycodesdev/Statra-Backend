@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('vital_readings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('device_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('device_id')->nullable()->constrained()->nullOnDelete();
             $table->enum('type', [
                 'heart_rate', 'spo2', 'temperature',
                 'blood_pressure', 'steps', 'sleep_state', 'hrv',
