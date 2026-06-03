@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('gender', ['male', 'female', 'other'])->nullable();
             $table->string('emergency_contact_name')->nullable();
             $table->string('emergency_contact_phone')->nullable();
-            $table->foreignId('assigned_doctor_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('assigned_doctor_id')->nullable()->constrained('users')->noActionOnDelete();
             $table->timestamps();
         });
     }

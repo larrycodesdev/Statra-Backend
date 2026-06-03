@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
             $table->string('title');
             $table->longText('content');
-            $table->foreignId('recorded_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('recorded_by')->nullable()->constrained('users')->noActionOnDelete();
             $table->timestamps();
 
             $table->index('patient_id');

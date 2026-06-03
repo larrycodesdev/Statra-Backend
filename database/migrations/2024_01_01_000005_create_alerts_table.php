@@ -11,12 +11,12 @@ return new class extends Migration
         Schema::create('alerts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('vital_reading_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('vital_reading_id')->nullable()->constrained()->noActionOnDelete();
             $table->string('type');
             $table->unsignedTinyInteger('level'); // 1=critical, 2=warning
             $table->text('message');
             $table->enum('status', ['pending', 'acknowledged', 'resolved'])->default('pending');
-            $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('assigned_to')->nullable()->constrained('users')->noActionOnDelete();
             $table->timestamp('resolved_at')->nullable();
             $table->timestamps();
 
