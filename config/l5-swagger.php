@@ -47,7 +47,13 @@ return [
                 'token_url'    => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/oauth/token',
                 'scopes'       => [],
             ],
-            'scan'      => ['exclude' => []],
+            'scan'      => [
+                'exclude'  => [],
+                'analyser' => new \OpenApi\Analysers\ReflectionAnalyser([
+                    new \OpenApi\Analysers\AttributeAnnotationFactory(),
+                    new \OpenApi\Analysers\DocBlockAnnotationFactory(),
+                ]),
+            ],
             'schemes'   => [],
             'constants' => ['L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000')],
         ],
@@ -94,7 +100,13 @@ return [
                 'token_url'    => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/oauth/token',
                 'scopes'       => [],
             ],
-            'scan'      => ['exclude' => []],
+            'scan'      => [
+                'exclude'  => [],
+                'analyser' => new \OpenApi\Analysers\ReflectionAnalyser([
+                    new \OpenApi\Analysers\AttributeAnnotationFactory(),
+                    new \OpenApi\Analysers\DocBlockAnnotationFactory(),
+                ]),
+            ],
             'schemes'   => [],
             'constants' => ['L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000')],
         ],
