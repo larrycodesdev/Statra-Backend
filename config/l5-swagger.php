@@ -3,10 +3,6 @@
 return [
     'default' => 'mobile-app',
 
-    // Never auto-regenerate — specs are pre-built YAML→JSON in public/api-docs/
-    // To update: edit the YAML, then run: php artisan docs:generate
-    'generate_always' => false,
-
     'documentations' => [
 
         // ── Mobile App docs (/docs/mobile-app) ──────────────────────────────
@@ -14,6 +10,7 @@ return [
             'api' => [
                 'title' => 'SCD Wellness — Mobile App API',
             ],
+            'generate_always' => false,
             'routes' => [
                 'api'             => 'api/v1/docs/mobile-app.json',
                 'docs'            => 'docs/mobile-app',
@@ -60,6 +57,7 @@ return [
             'api' => [
                 'title' => 'STATRA — Check-in Web App API',
             ],
+            'generate_always' => false,
             'routes' => [
                 'api'             => 'api/v1/docs/check-in.json',
                 'docs'            => 'docs/check-in',
