@@ -2,16 +2,18 @@
 
 namespace App\OpenApi\MobileApp;
 
+use OpenApi\Attributes as OA;
+
+#[OA\Info(
+    title: 'SCD Wellness — Mobile App API',
+    version: '1.0.0',
+    description: 'REST API for the SCD Wellness Flutter app. Two roles: **patient** (mobile) and **doctor** (web dashboard). Protected routes require `Authorization: Bearer {token}`.',
+    contact: new OA\Contact(email: 'api@scdwellness.app')
+)]
+#[OA\Server(url: 'http://localhost:8000', description: 'Local dev')]
+#[OA\Server(url: 'https://api.scdwellness.app', description: 'Production')]
+#[OA\SecurityScheme(securityScheme: 'bearerAuth', type: 'http', scheme: 'bearer', bearerFormat: 'Sanctum')]
 /**
- * @OA\Info(
- *   title="SCD Wellness — Mobile App API",
- *   version="1.0.0",
- *   description="REST API for the SCD Wellness Flutter app. Two roles: **patient** (mobile) and **doctor** (web dashboard). Protected routes require `Authorization: Bearer {token}`.",
- *   @OA\Contact(email="api@scdwellness.app")
- * )
- * @OA\Server(url="http://localhost:8000", description="Local dev")
- * @OA\Server(url="https://api.scdwellness.app", description="Production")
- * @OA\SecurityScheme(securityScheme="bearerAuth", type="http", scheme="bearer", bearerFormat="Sanctum")
  * @OA\Tag(name="Patient Auth",        description="Register, login (email or username), OTP password reset")
  * @OA\Tag(name="Patient Profile",     description="Personal info, medical info, emergency contacts, FCM token")
  * @OA\Tag(name="Patient Device",      description="Wearable device registration")

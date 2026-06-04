@@ -12,6 +12,9 @@ class GenerateDocs extends Command
 
     public function handle(): int
     {
+        // Silence swagger-php warnings that Laravel would otherwise convert to exceptions
+        set_error_handler(null);
+
         $specs = [
             'mobile-app' => [
                 'yaml' => public_path('api-docs/mobile-app.yaml'),

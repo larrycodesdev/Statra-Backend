@@ -2,16 +2,18 @@
 
 namespace App\OpenApi\CheckIn;
 
+use OpenApi\Attributes as OA;
+
+#[OA\Info(
+    title: 'STATRA — Check-in Web App API',
+    version: '1.0.0',
+    description: 'API for the STATRA Sickle Cell Check-in web app. Users log in with username + password. All check-in submissions are risk-scored **server-side** — the client sends raw inputs only, never scores.',
+    contact: new OA\Contact(email: 'api@scdwellness.app')
+)]
+#[OA\Server(url: 'http://localhost:8000', description: 'Local dev')]
+#[OA\Server(url: 'https://api.scdwellness.app', description: 'Production')]
+#[OA\SecurityScheme(securityScheme: 'bearerAuth', type: 'http', scheme: 'bearer', bearerFormat: 'Sanctum')]
 /**
- * @OA\Info(
- *   title="STATRA — Check-in Web App API",
- *   version="1.0.0",
- *   description="API for the STATRA Sickle Cell Check-in web app. Users log in with username + password. All check-in submissions are risk-scored **server-side** — the client sends raw inputs only, never scores.",
- *   @OA\Contact(email="api@scdwellness.app")
- * )
- * @OA\Server(url="http://localhost:8000", description="Local dev")
- * @OA\Server(url="https://api.scdwellness.app", description="Production")
- * @OA\SecurityScheme(securityScheme="bearerAuth", type="http", scheme="bearer", bearerFormat="Sanctum")
  * @OA\Tag(name="Auth",    description="Register, login, logout")
  * @OA\Tag(name="CheckIn", description="Submit and retrieve check-in records")
  */
