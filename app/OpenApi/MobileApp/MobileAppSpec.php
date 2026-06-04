@@ -10,8 +10,8 @@ use OpenApi\Attributes as OA;
     description: 'REST API for the SCD Wellness Flutter app. Two roles: **patient** (mobile) and **doctor** (web dashboard). Protected routes require `Authorization: Bearer {token}`.',
     contact: new OA\Contact(email: 'api@scdwellness.app')
 )]
+#[OA\Server(url: 'https://statrawebapp-f7gaa7bghfczhmf7.centralus-01.azurewebsites.net', description: 'Production')]
 #[OA\Server(url: 'http://localhost:8000', description: 'Local dev')]
-#[OA\Server(url: 'https://api.scdwellness.app', description: 'Production')]
 #[OA\SecurityScheme(securityScheme: 'bearerAuth', type: 'http', scheme: 'bearer', bearerFormat: 'Sanctum')]
 #[OA\Tag(name: 'Patient Auth',        description: 'Register, login (email or username), OTP password reset')]
 #[OA\Tag(name: 'Patient Profile',     description: 'Personal info, medical info, emergency contacts, FCM token')]

@@ -10,8 +10,8 @@ use OpenApi\Attributes as OA;
     description: 'API for the STATRA Sickle Cell Check-in web app. Users log in with username + password. All check-in submissions are risk-scored **server-side** — the client sends raw inputs only, never scores.',
     contact: new OA\Contact(email: 'api@scdwellness.app')
 )]
+#[OA\Server(url: 'https://statrawebapp-f7gaa7bghfczhmf7.centralus-01.azurewebsites.net', description: 'Production')]
 #[OA\Server(url: 'http://localhost:8000', description: 'Local dev')]
-#[OA\Server(url: 'https://api.scdwellness.app', description: 'Production')]
 #[OA\SecurityScheme(securityScheme: 'bearerAuth', type: 'http', scheme: 'bearer', bearerFormat: 'Sanctum')]
 /**
  * @OA\Tag(name="Auth",    description="Register, login, logout")
