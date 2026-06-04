@@ -3,9 +3,13 @@
 return [
     'default' => 'mobile-app',
 
+    // Never auto-regenerate — specs are pre-built YAML→JSON in public/api-docs/
+    // To update: edit the YAML, then run: php artisan docs:generate
+    'generate_always' => false,
+
     'documentations' => [
 
-        // ── Mobile App docs ─────────────────────────────────────────────────
+        // ── Mobile App docs (/docs/mobile-app) ──────────────────────────────
         'mobile-app' => [
             'api' => [
                 'title' => 'SCD Wellness — Mobile App API',
@@ -18,7 +22,7 @@ return [
                 'group_options'   => [],
             ],
             'paths' => [
-                'docs'                   => storage_path('api-docs/mobile-app'),
+                'docs'                   => public_path('api-docs/mobile-app'),
                 'docs_json'              => 'mobile-app-api-docs.json',
                 'docs_yaml'              => 'mobile-app-api-docs.yaml',
                 'annotations'            => [base_path('app/OpenApi/MobileApp')],
@@ -38,20 +42,20 @@ return [
                     'oauth2' => ['use_pkce_with_authorization_code_grant' => false],
                 ],
             ],
-            'security'            => [],
+            'security'             => [],
             'security_definitions' => ['name' => 'bearerAuth', 'in' => 'header', 'scopes' => []],
-            'oauth2'              => [
+            'oauth2'               => [
                 'default_flow' => 'implicit',
                 'auth_url'     => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/oauth/authorize',
                 'token_url'    => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/oauth/token',
                 'scopes'       => [],
             ],
-            'scan'    => ['exclude' => []],
-            'schemes' => [],
+            'scan'      => ['exclude' => []],
+            'schemes'   => [],
             'constants' => ['L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000')],
         ],
 
-        // ── Check-in docs ────────────────────────────────────────────────────
+        // ── Check-in docs (/docs/check-in) ──────────────────────────────────
         'check-in' => [
             'api' => [
                 'title' => 'STATRA — Check-in Web App API',
@@ -64,7 +68,7 @@ return [
                 'group_options'   => [],
             ],
             'paths' => [
-                'docs'                   => storage_path('api-docs/check-in'),
+                'docs'                   => public_path('api-docs/check-in'),
                 'docs_json'              => 'check-in-api-docs.json',
                 'docs_yaml'              => 'check-in-api-docs.yaml',
                 'annotations'            => [base_path('app/OpenApi/CheckIn')],
@@ -84,16 +88,16 @@ return [
                     'oauth2' => ['use_pkce_with_authorization_code_grant' => false],
                 ],
             ],
-            'security'            => [],
+            'security'             => [],
             'security_definitions' => ['name' => 'bearerAuth', 'in' => 'header', 'scopes' => []],
-            'oauth2'              => [
+            'oauth2'               => [
                 'default_flow' => 'implicit',
                 'auth_url'     => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/oauth/authorize',
                 'token_url'    => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/oauth/token',
                 'scopes'       => [],
             ],
-            'scan'    => ['exclude' => []],
-            'schemes' => [],
+            'scan'      => ['exclude' => []],
+            'schemes'   => [],
             'constants' => ['L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000')],
         ],
     ],
@@ -106,7 +110,7 @@ return [
             'group_options'   => [],
         ],
         'paths' => [
-            'docs'                   => storage_path('api-docs'),
+            'docs'                   => public_path('api-docs'),
             'docs_json'              => 'api-docs.json',
             'docs_yaml'              => 'api-docs.yaml',
             'annotations'            => [base_path('app')],
@@ -117,12 +121,12 @@ return [
         ],
         'ui' => [
             'display' => [
-                'doc_expansion'   => env('L5_SWAGGER_UI_DOC_EXPANSION', 'none'),
-                'filter'          => env('L5_SWAGGER_UI_FILTERS', true),
+                'doc_expansion'   => 'none',
+                'filter'          => true,
                 'show_extensions' => true,
             ],
             'authorization' => [
-                'persist_authorization' => env('L5_SWAGGER_UI_PERSIST_AUTHORIZATION', true),
+                'persist_authorization' => true,
                 'oauth2' => ['use_pkce_with_authorization_code_grant' => false],
             ],
         ],

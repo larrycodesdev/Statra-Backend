@@ -1,0 +1,2377 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "SCD Wellness \u2014 Mobile App API",
+        "version": "1.0.0",
+        "description": "REST API for the SCD Wellness Flutter app.\n\nTwo user roles:\n- **patient** \u2014 mobile app (iOS + Android)\n- **doctor** \u2014 web dashboard\n\nAll protected routes require `Authorization: Bearer {token}`.\nTokens are issued by the login/register endpoints and scoped per role.\n",
+        "contact": {
+            "email": "api@scdwellness.app"
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Local dev"
+        },
+        {
+            "url": "https://api.scdwellness.app",
+            "description": "Production"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "Sanctum"
+            }
+        },
+        "schemas": {
+            "SuccessResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Operation successful."
+                    },
+                    "data": {
+                        "nullable": true
+                    }
+                }
+            },
+            "AuthResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Login successful."
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "token": {
+                                "type": "string",
+                                "example": "1|abc123..."
+                            },
+                            "user": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Jane"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Johnson"
+                                    },
+                                    "username": {
+                                        "type": "string",
+                                        "example": "janej"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "jane@example.com"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "patient"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "PaginatedResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "meta": {
+                        "type": "object",
+                        "properties": {
+                            "current_page": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "per_page": {
+                                "type": "integer",
+                                "example": 20
+                            },
+                            "total": {
+                                "type": "integer",
+                                "example": 84
+                            },
+                            "last_page": {
+                                "type": "integer",
+                                "example": 5
+                            }
+                        }
+                    }
+                }
+            },
+            "ErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Invalid credentials."
+                    }
+                }
+            },
+            "ValidationError": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Validation failed."
+                    },
+                    "errors": {
+                        "type": "object"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Patient Auth",
+            "description": "Register, login (email or username), OTP password reset"
+        },
+        {
+            "name": "Patient Profile",
+            "description": "Personal info, medical info, emergency contacts, FCM token"
+        },
+        {
+            "name": "Patient Device",
+            "description": "Wearable device registration and sync status"
+        },
+        {
+            "name": "Patient Vitals",
+            "description": "Vitals sync from JCVital 2208A band and history queries"
+        },
+        {
+            "name": "Patient Alerts",
+            "description": "Alerts triggered by the server-side alert engine"
+        },
+        {
+            "name": "Patient Logs",
+            "description": "Pain logs, medication logs, appointments"
+        },
+        {
+            "name": "Patient Settings",
+            "description": "Privacy and notification toggles"
+        },
+        {
+            "name": "Doctor Auth",
+            "description": "Doctor register and login"
+        },
+        {
+            "name": "Doctor Patients",
+            "description": "Patient management and dashboard"
+        },
+        {
+            "name": "Doctor Alerts",
+            "description": "Alert management \u2014 resolve, assign"
+        },
+        {
+            "name": "Doctor Appointments",
+            "description": "Appointment scheduling"
+        },
+        {
+            "name": "Doctor Reports",
+            "description": "Health trends, analytics, CSV export"
+        }
+    ],
+    "paths": {
+        "/api/v1/patient/auth/register": {
+            "post": {
+                "tags": [
+                    "Patient Auth"
+                ],
+                "summary": "Register a new patient account",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "first_name",
+                                    "last_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Jane"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Johnson"
+                                    },
+                                    "username": {
+                                        "type": "string",
+                                        "example": "janej",
+                                        "description": "Auto-generated if omitted"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "jane@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Password1"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "Password1"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+2348012345678"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Registration successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/auth/login": {
+            "post": {
+                "tags": [
+                    "Patient Auth"
+                ],
+                "summary": "Login with email OR username",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "identifier",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "identifier": {
+                                        "type": "string",
+                                        "example": "jane@example.com",
+                                        "description": "Email address or username \u2014 either works"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Password1"
+                                    },
+                                    "fcm_token": {
+                                        "type": "string",
+                                        "description": "Refreshes push notification token on login"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/auth/social": {
+            "post": {
+                "tags": [
+                    "Patient Auth"
+                ],
+                "summary": "Sign in with Google / Apple / Facebook",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "provider",
+                                    "token"
+                                ],
+                                "properties": {
+                                    "provider": {
+                                        "type": "string",
+                                        "enum": [
+                                            "google",
+                                            "apple",
+                                            "facebook"
+                                        ],
+                                        "example": "google"
+                                    },
+                                    "token": {
+                                        "type": "string",
+                                        "description": "OAuth access token from the provider SDK"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Social login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid social token"
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Patient Auth"
+                ],
+                "summary": "Step 1 \u2014 Request a 6-digit OTP via email",
+                "description": "Always returns success to prevent email enumeration. OTP expires after 10 minutes.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "jane@example.com"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OTP sent (or silently ignored if email not found)"
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/auth/verify-otp": {
+            "post": {
+                "tags": [
+                    "Patient Auth"
+                ],
+                "summary": "Step 2 \u2014 Verify OTP, receive a reset_token",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "otp"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "otp": {
+                                        "type": "string",
+                                        "example": "482916",
+                                        "description": "6-digit code from email"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OTP verified \u2014 proceed to step 3",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "reset_token": {
+                                                    "type": "string",
+                                                    "example": "AbCdEfGh..."
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired OTP"
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Patient Auth"
+                ],
+                "summary": "Step 3 \u2014 Set new password using reset_token",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reset_token",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "reset_token": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "NewPass1"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "NewPass1"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password reset successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired reset token"
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/auth/logout": {
+            "post": {
+                "tags": [
+                    "Patient Auth"
+                ],
+                "summary": "Revoke current device token",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logged out",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/auth/change-password": {
+            "put": {
+                "tags": [
+                    "Patient Auth"
+                ],
+                "summary": "Change password while logged in (Settings screen)",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "current_password",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "current_password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "NewPass1"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "NewPass1"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Current password incorrect"
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/profile": {
+            "get": {
+                "tags": [
+                    "Patient Profile"
+                ],
+                "summary": "Get full patient profile",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first_name": {
+                                                    "type": "string",
+                                                    "example": "Jane"
+                                                },
+                                                "last_name": {
+                                                    "type": "string",
+                                                    "example": "Johnson"
+                                                },
+                                                "username": {
+                                                    "type": "string",
+                                                    "example": "jenny"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "jane@example.com"
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "+2348012345678"
+                                                },
+                                                "avatar": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "gender": {
+                                                    "type": "string",
+                                                    "example": "female"
+                                                },
+                                                "age": {
+                                                    "type": "integer",
+                                                    "example": 25,
+                                                    "description": "Derived from date_of_birth"
+                                                },
+                                                "date_of_birth": {
+                                                    "type": "string",
+                                                    "example": "2001-03-15"
+                                                },
+                                                "genotype": {
+                                                    "type": "string",
+                                                    "example": "SS"
+                                                },
+                                                "blood_type": {
+                                                    "type": "string",
+                                                    "example": "O+"
+                                                },
+                                                "condition": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "Leg Ulcer"
+                                                    ]
+                                                },
+                                                "emergency_contact": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "Joseph Johnson"
+                                                        },
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "example": "+234 80 333 57163"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "example": "joseph@gmail.com"
+                                                        },
+                                                        "address": {
+                                                            "type": "string",
+                                                            "example": "5 Herbert Road"
+                                                        },
+                                                        "relationship": {
+                                                            "type": "string",
+                                                            "example": "Brother"
+                                                        }
+                                                    }
+                                                },
+                                                "care_team": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Patient Profile"
+                ],
+                "summary": "Update personal info",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string"
+                                    },
+                                    "last_name": {
+                                        "type": "string"
+                                    },
+                                    "username": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "avatar": {
+                                        "type": "string"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "other"
+                                        ]
+                                    },
+                                    "date_of_birth": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2001-03-15"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/profile/medical-info": {
+            "put": {
+                "tags": [
+                    "Patient Profile"
+                ],
+                "summary": "Update genotype, blood type, and conditions",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "genotype": {
+                                        "type": "string",
+                                        "enum": [
+                                            "SS",
+                                            "SC",
+                                            "SB",
+                                            "SD",
+                                            "SE",
+                                            "SO",
+                                            "other"
+                                        ],
+                                        "example": "SS"
+                                    },
+                                    "blood_type": {
+                                        "type": "string",
+                                        "example": "O+"
+                                    },
+                                    "condition": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Leg Ulcer",
+                                                "Acute chest syndrome",
+                                                "Stroke",
+                                                "Organ damage",
+                                                "Vision Problem",
+                                                "Priapism"
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Medical info updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/profile/emergency-contacts": {
+            "put": {
+                "tags": [
+                    "Patient Profile"
+                ],
+                "summary": "Update emergency contact details",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Joseph Johnson"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+234 80 333 57163"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "joseph@gmail.com"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "5 Herbert Road Houston"
+                                    },
+                                    "relationship": {
+                                        "type": "string",
+                                        "example": "Brother"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Emergency contact updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/profile/fcm-token": {
+            "put": {
+                "tags": [
+                    "Patient Profile"
+                ],
+                "summary": "Refresh FCM push notification token",
+                "description": "Call this on every app launch to keep the push token fresh.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fcm_token"
+                                ],
+                                "properties": {
+                                    "fcm_token": {
+                                        "type": "string",
+                                        "example": "fGT7s_..."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "FCM token updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/settings": {
+            "get": {
+                "tags": [
+                    "Patient Settings"
+                ],
+                "summary": "Get privacy and notification settings",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Settings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "allow_doctor_view_records": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "allow_doctor_view_data": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "share_symptom_pain_data": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "share_medication_records": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "reminder_enabled": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "smart_alert_enabled": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Patient Settings"
+                ],
+                "summary": "Update one or more privacy/notification toggles",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "allow_doctor_view_records": {
+                                        "type": "boolean"
+                                    },
+                                    "allow_doctor_view_data": {
+                                        "type": "boolean"
+                                    },
+                                    "share_symptom_pain_data": {
+                                        "type": "boolean"
+                                    },
+                                    "share_medication_records": {
+                                        "type": "boolean"
+                                    },
+                                    "reminder_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "smart_alert_enabled": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Settings updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/device/register": {
+            "post": {
+                "tags": [
+                    "Patient Device"
+                ],
+                "summary": "Register or update the connected JCVital wearable",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "device_id",
+                                    "platform"
+                                ],
+                                "properties": {
+                                    "device_id": {
+                                        "type": "string",
+                                        "example": "JCV-2208A-001"
+                                    },
+                                    "device_model": {
+                                        "type": "string",
+                                        "example": "JCVital 2208A"
+                                    },
+                                    "firmware_version": {
+                                        "type": "string",
+                                        "example": "2.1.4"
+                                    },
+                                    "platform": {
+                                        "type": "string",
+                                        "enum": [
+                                            "android",
+                                            "ios"
+                                        ],
+                                        "example": "android"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Device registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/device/status": {
+            "get": {
+                "tags": [
+                    "Patient Device"
+                ],
+                "summary": "Get status of all registered devices",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Device list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/vitals/sync": {
+            "post": {
+                "tags": [
+                    "Patient Vitals"
+                ],
+                "summary": "Sync a batch of readings from the wearable",
+                "description": "Returns **202 Accepted** immediately.\nThe batch is processed asynchronously \u2014 the queue worker evaluates each reading\nagainst alert thresholds and fires push notifications if any are breached.\n",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "device_id",
+                                    "readings"
+                                ],
+                                "properties": {
+                                    "device_id": {
+                                        "type": "string",
+                                        "example": "JCV-2208A-001"
+                                    },
+                                    "readings": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "type",
+                                                "value",
+                                                "unit",
+                                                "recorded_at"
+                                            ],
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "heart_rate",
+                                                        "spo2",
+                                                        "temperature",
+                                                        "blood_pressure",
+                                                        "steps",
+                                                        "sleep_state",
+                                                        "hrv"
+                                                    ]
+                                                },
+                                                "value": {
+                                                    "description": "Number for most types; {systolic, diastolic} object for blood_pressure"
+                                                },
+                                                "unit": {
+                                                    "type": "string",
+                                                    "example": "bpm"
+                                                },
+                                                "recorded_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "example": {
+                                "device_id": "JCV-2208A-001",
+                                "readings": [
+                                    {
+                                        "type": "spo2",
+                                        "value": 88,
+                                        "unit": "%",
+                                        "recorded_at": "2026-06-01T10:00:00Z"
+                                    },
+                                    {
+                                        "type": "heart_rate",
+                                        "value": 155,
+                                        "unit": "bpm",
+                                        "recorded_at": "2026-06-01T10:00:05Z"
+                                    },
+                                    {
+                                        "type": "temperature",
+                                        "value": 36.5,
+                                        "unit": "\u00b0C",
+                                        "recorded_at": "2026-06-01T10:00:10Z"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Accepted \u2014 batch queued for processing"
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/vitals": {
+            "get": {
+                "tags": [
+                    "Patient Vitals"
+                ],
+                "summary": "Get vitals history with optional filters",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "heart_rate",
+                                "spo2",
+                                "temperature",
+                                "blood_pressure",
+                                "steps",
+                                "sleep_state",
+                                "hrv"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "7d",
+                                "30d",
+                                "90d"
+                            ],
+                            "default": "7d"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vitals list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/alerts": {
+            "get": {
+                "tags": [
+                    "Patient Alerts"
+                ],
+                "summary": "Get alerts triggered for this patient",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "acknowledged",
+                                "resolved"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alert list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/pain-log": {
+            "post": {
+                "tags": [
+                    "Patient Logs"
+                ],
+                "summary": "Log a pain episode",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "pain_level",
+                                    "logged_at"
+                                ],
+                                "properties": {
+                                    "pain_level": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 10,
+                                        "example": 7
+                                    },
+                                    "location": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "example": "chest"
+                                        }
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Sharp pain after walking"
+                                    },
+                                    "logged_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pain log saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "Patient Logs"
+                ],
+                "summary": "Get pain log history",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pain logs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/medication-log": {
+            "post": {
+                "tags": [
+                    "Patient Logs"
+                ],
+                "summary": "Log a medication entry",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "medication_name",
+                                    "dosage",
+                                    "scheduled_at",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "medication_name": {
+                                        "type": "string",
+                                        "example": "Hydroxyurea 500mg"
+                                    },
+                                    "dosage": {
+                                        "type": "string",
+                                        "example": "1 tablet"
+                                    },
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "taken_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "taken",
+                                            "missed",
+                                            "pending"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Medication log saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "Patient Logs"
+                ],
+                "summary": "Get medication log history",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Medication logs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/appointments": {
+            "get": {
+                "tags": [
+                    "Patient Logs"
+                ],
+                "summary": "Get upcoming and past appointments",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Appointments",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/auth/register": {
+            "post": {
+                "tags": [
+                    "Doctor Auth"
+                ],
+                "summary": "Register a new doctor account",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Dr. Adewale Okafor"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string"
+                                    },
+                                    "hospital_name": {
+                                        "type": "string",
+                                        "example": "Lagos General Hospital"
+                                    },
+                                    "department": {
+                                        "type": "string",
+                                        "example": "Haematology"
+                                    },
+                                    "specialisation": {
+                                        "type": "string",
+                                        "example": "Sickle Cell Disease"
+                                    },
+                                    "license_number": {
+                                        "type": "string",
+                                        "example": "MDCN-12345"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Doctor registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/auth/login": {
+            "post": {
+                "tags": [
+                    "Doctor Auth"
+                ],
+                "summary": "Doctor login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/auth/logout": {
+            "post": {
+                "tags": [
+                    "Doctor Auth"
+                ],
+                "summary": "Revoke doctor token",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logged out",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/patients": {
+            "get": {
+                "tags": [
+                    "Doctor Patients"
+                ],
+                "summary": "List all patients assigned to this doctor",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/patients/{id}": {
+            "get": {
+                "tags": [
+                    "Doctor Patients"
+                ],
+                "summary": "Get full patient detail",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient detail",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/patients/{id}/vitals": {
+            "get": {
+                "tags": [
+                    "Doctor Patients"
+                ],
+                "summary": "Get a specific patient's vitals",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "heart_rate",
+                                "spo2",
+                                "temperature",
+                                "blood_pressure",
+                                "steps",
+                                "sleep_state",
+                                "hrv"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "7d",
+                                "30d",
+                                "90d"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vitals data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/patients/{id}/alerts": {
+            "get": {
+                "tags": [
+                    "Doctor Patients"
+                ],
+                "summary": "Get all alerts for a specific patient",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alert list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/patients/{id}/notes": {
+            "post": {
+                "tags": [
+                    "Doctor Patients"
+                ],
+                "summary": "Add a clinical note to a patient record",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Post-visit note"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Patient reported improvement after medication adjustment."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Note saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/dashboard": {
+            "get": {
+                "tags": [
+                    "Doctor Patients"
+                ],
+                "summary": "Summary metrics card",
+                "description": "Returns total patients, active alert counts, and upcoming appointments.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dashboard metrics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/alerts": {
+            "get": {
+                "tags": [
+                    "Doctor Alerts"
+                ],
+                "summary": "Get all patient alerts (filterable)",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "acknowledged",
+                                "resolved"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "level",
+                        "in": "query",
+                        "description": "1 = critical, 2 = warning",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                1,
+                                2
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alert list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/alerts/{id}/resolve": {
+            "put": {
+                "tags": [
+                    "Doctor Alerts"
+                ],
+                "summary": "Mark an alert as resolved",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alert resolved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/alerts/{id}/assign": {
+            "put": {
+                "tags": [
+                    "Doctor Alerts"
+                ],
+                "summary": "Assign an alert to a doctor",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "doctor_id"
+                                ],
+                                "properties": {
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Alert assigned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/appointments": {
+            "get": {
+                "tags": [
+                    "Doctor Appointments"
+                ],
+                "summary": "Get doctor's appointment list",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Appointments",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Doctor Appointments"
+                ],
+                "summary": "Schedule a new appointment",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "patient_id",
+                                    "scheduled_at"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Follow-up for SpO2 monitoring"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Appointment created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/appointments/{id}": {
+            "put": {
+                "tags": [
+                    "Doctor Appointments"
+                ],
+                "summary": "Update appointment status or details",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "upcoming",
+                                            "completed",
+                                            "cancelled"
+                                        ]
+                                    },
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Appointment updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/reports/health-trends": {
+            "get": {
+                "tags": [
+                    "Doctor Reports"
+                ],
+                "summary": "Vitals trends across all assigned patients",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "heart_rate",
+                                "spo2",
+                                "temperature",
+                                "blood_pressure",
+                                "steps",
+                                "sleep_state",
+                                "hrv"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "7d",
+                                "30d",
+                                "90d"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Trend data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/reports/alerts-analytics": {
+            "get": {
+                "tags": [
+                    "Doctor Reports"
+                ],
+                "summary": "Alert counts by type, level, and status",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Analytics summary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/reports/export": {
+            "get": {
+                "tags": [
+                    "Doctor Reports"
+                ],
+                "summary": "Export vitals data as a CSV file",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "csv"
+                            ],
+                            "example": "csv"
+                        }
+                    },
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "7d",
+                                "30d",
+                                "90d"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV file download",
+                        "content": {
+                            "text/csv": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
