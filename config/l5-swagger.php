@@ -47,15 +47,9 @@ return [
                 'token_url'    => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/oauth/token',
                 'scopes'       => [],
             ],
-            'scanOptions' => [
-                'exclude'  => [],
-                'analyser' => new \OpenApi\Analysers\ReflectionAnalyser([
-                    new \OpenApi\Analysers\AttributeAnnotationFactory(),
-                    new \OpenApi\Analysers\DocBlockAnnotationFactory(),
-                ]),
-            ],
-            'schemes'   => [],
-            'constants' => ['L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000')],
+            'scanOptions' => ['exclude' => []],
+            'schemes'     => [],
+            'constants'   => ['L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000')],
         ],
 
         // ── Check-in docs (/docs/check-in) ──────────────────────────────────
@@ -100,15 +94,9 @@ return [
                 'token_url'    => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/oauth/token',
                 'scopes'       => [],
             ],
-            'scanOptions' => [
-                'exclude'  => [],
-                'analyser' => new \OpenApi\Analysers\ReflectionAnalyser([
-                    new \OpenApi\Analysers\AttributeAnnotationFactory(),
-                    new \OpenApi\Analysers\DocBlockAnnotationFactory(),
-                ]),
-            ],
-            'schemes'   => [],
-            'constants' => ['L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000')],
+            'scanOptions' => ['exclude' => []],
+            'schemes'     => [],
+            'constants'   => ['L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000')],
         ],
     ],
 
