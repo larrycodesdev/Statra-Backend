@@ -25,7 +25,7 @@ return [
                 'annotations'            => [base_path('app/OpenApi/MobileApp')],
                 'views'                  => base_path('resources/views/vendor/l5-swagger'),
                 'base'                   => null,
-                'swagger_ui_assets_path' => env('L5_SWAGGER_UI_ASSETS_PATH', 'vendor/l5-swagger/'),
+                'swagger_ui_assets_path' => 'docs/mobile-app/asset/',
                 'excludes'               => [],
             ],
             'ui' => [
@@ -72,7 +72,7 @@ return [
                 'annotations'            => [base_path('app/OpenApi/CheckIn')],
                 'views'                  => base_path('resources/views/vendor/l5-swagger'),
                 'base'                   => null,
-                'swagger_ui_assets_path' => env('L5_SWAGGER_UI_ASSETS_PATH', 'vendor/l5-swagger/'),
+                'swagger_ui_assets_path' => 'docs/check-in/asset/',
                 'excludes'               => [],
             ],
             'ui' => [
