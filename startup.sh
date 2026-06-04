@@ -6,8 +6,10 @@ cd /home/site/wwwroot
 curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp --filename=composer
 /tmp/composer install --no-dev --optimize-autoloader
 
-# Set permissions
-chmod -R 755 storage bootstrap/cache
+# Create required directories and set permissions
+mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions
+mkdir -p storage/logs bootstrap/cache
+chmod -R 775 storage bootstrap/cache
 
 # Fix nginx document root for Laravel
 cat > /etc/nginx/sites-enabled/default << 'EOF'
