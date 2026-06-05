@@ -14,8 +14,6 @@ class StoreCheckInRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'pid'        => ['required', 'string'],
-            'name'       => ['required', 'string'],
             'genotype'   => ['required', 'in:SS,SC,SB+,SB0,Unknown'],
             'meds'       => ['required', 'in:Yes,No,Missed'],
             'pain'       => ['required', 'integer', 'min:0', 'max:10'],

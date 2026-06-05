@@ -30,6 +30,7 @@ class AuthController extends Controller
             'message'  => 'Registered successfully.',
             'data'     => [
                 'token'    => $token,
+                'pid'      => $user->pid,
                 'name'     => $user->name,
                 'username' => $user->username,
             ],
@@ -56,6 +57,7 @@ class AuthController extends Controller
             'message' => 'Login successful.',
             'data'    => [
                 'token'    => $token,
+                'pid'      => $user->pid,
                 'name'     => $user->name,
                 'username' => $user->username,
             ],

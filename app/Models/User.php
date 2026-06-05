@@ -16,7 +16,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
-        'uuid', 'name',
+        'uuid', 'pid', 'name',
         'first_name', 'last_name', 'username',
         'email', 'password',
         'role', 'phone', 'avatar', 'fcm_token',
@@ -40,6 +40,12 @@ class User extends Authenticatable
         static::creating(function (User $user) {
             if (empty($user->uuid)) {
                 $user->uuid = Str::uuid()->toString();
+            }
+            if (empty($user->pid) && $user->role === 'checkin_user') {
+                do {
+                    $pid = 'STA-' . strtoupper(Str::random(6));
+                } while (static::where('pid', $pid)->exists());
+                $user->pid = $pid;
             }
         });
     }

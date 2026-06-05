@@ -32,9 +32,10 @@ class CheckInController extends Controller
         // Always recalculate server-side — never trust scores from client
         $result = $this->riskCalculator->calculate($data);
 
-        $checkIn = auth()->user()->checkIns()->create([
-            'pid'           => $data['pid'],
-            'name'          => $data['name'],
+        $user    = auth()->user();
+        $checkIn = $user->checkIns()->create([
+            'pid'           => $user->pid,
+            'name'          => $user->name,
             'genotype'      => $data['genotype'],
             'meds'          => $data['meds'],
             'pain'          => $data['pain'],
@@ -70,9 +71,10 @@ class CheckInController extends Controller
 
         if (!$checkIn) {
             return response()->json([
-                'success' => false,
+                'success' => true,
                 'message' => 'No check-ins yet.',
-            ], 404);
+                'data'    => null,
+            ], 200);
         }
 
         return new CheckInResource($checkIn);
