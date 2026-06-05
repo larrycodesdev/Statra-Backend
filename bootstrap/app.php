@@ -78,4 +78,16 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 403);
             }
         });
+
+        // Catch-all: return JSON 500 for any unhandled exception on API routes
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => app()->hasDebugModeEnabled()
+                        ? $e->getMessage()
+                        : 'Server error.',
+                ], 500);
+            }
+        });
     })->create();
