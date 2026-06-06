@@ -22,6 +22,8 @@ return [
         env('FRONTEND_URL', 'http://localhost:3000'),
         'http://localhost:5173',   // Vite dev server (check-in web app)
         'http://localhost:4173',   // Vite preview
+        'https://statra.health',
+        'https://www.statra.health',
     ],
 
     'allowed_origins_patterns' => [],
