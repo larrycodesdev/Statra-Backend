@@ -57,10 +57,13 @@ jobs:
 
       - name: Run database migrations
         run: |
+          PROFILE='${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7051479EEAFC4622B5177E595F5371C1 }}'
+          KUDU_USER=$(echo "$PROFILE" | grep -oP 'userName="\K[^"]+' | head -1)
+          KUDU_PASS=$(echo "$PROFILE" | grep -oP 'userPWD="\K[^"]+' | head -1)
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             "https://StatraWebApp.scm.azurewebsites.net/api/command" \
             -H "Content-Type: application/json" \
-            --user "${{ secrets.AZURE_KUDU_USER }}:${{ secrets.AZURE_KUDU_PASS }}" \
+            --user "$KUDU_USER:$KUDU_PASS" \
             -d '{"command":"php artisan migrate --force 2>&1","dir":"/home/site/wwwroot"}')
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           BODY=$(echo "$RESPONSE" | head -1)
