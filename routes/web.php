@@ -22,7 +22,7 @@ Route::get('/email-testing', function () {
         return response()->json([
             'success' => false,
             'message' => 'Mail failed: ' . $e->getMessage(),
-        ], 500);
+        ]);
     }
 });
 
