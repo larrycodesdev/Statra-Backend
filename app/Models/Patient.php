@@ -73,6 +73,21 @@ class Patient extends Model
         return $this->hasMany(MedicalRecord::class);
     }
 
+    public function symptoms(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Symptom::class);
+    }
+
+    public function medications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Medication::class);
+    }
+
+    public function notifications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PatientNotification::class);
+    }
+
     // Age derived from date_of_birth
     public function getAgeAttribute(): ?int
     {
