@@ -54,3 +54,15 @@ jobs:
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7051479EEAFC4622B5177E595F5371C1 }}
+
+      - name: Run database migrations
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://StatraWebApp.scm.azurewebsites.net/api/command" \
+            -H "Content-Type: application/json" \
+            --user "${{ secrets.AZURE_KUDU_USER }}:${{ secrets.AZURE_KUDU_PASS }}" \
+            -d '{"command":"php artisan migrate --force 2>&1","dir":"/home/site/wwwroot"}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          echo "$BODY"
+          if [ "$HTTP_CODE" != "200" ]; then exit 1; fi
