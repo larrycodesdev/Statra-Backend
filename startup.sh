@@ -2,10 +2,6 @@
 
 cd /home/site/wwwroot
 
-# Download and run composer
-curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp --filename=composer
-/tmp/composer install --no-dev --optimize-autoloader
-
 # Create required directories and set permissions
 mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions
 mkdir -p storage/logs bootstrap/cache
@@ -58,7 +54,7 @@ EOF
 
 nginx -s reload
 
-# Clear and cache configurations
+# Cache config and routes
 php artisan config:clear
 php artisan config:cache
 php artisan route:cache
