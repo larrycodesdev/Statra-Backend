@@ -55,19 +55,3 @@ jobs:
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7051479EEAFC4622B5177E595F5371C1 }}
 
-      - name: Run database migrations
-        run: |
-          PROFILE='${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7051479EEAFC4622B5177E595F5371C1 }}'
-          KUDU_HOST=$(echo "$PROFILE" | grep -oP 'publishUrl="\K[^"]+' | head -1 | sed 's/:.*//')
-          KUDU_USER=$(echo "$PROFILE" | grep -oP 'userName="\K[^"]+' | head -1)
-          KUDU_PASS=$(echo "$PROFILE" | grep -oP 'userPWD="\K[^"]+' | head -1)
-          echo "Migrating via $KUDU_HOST"
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://$KUDU_HOST/api/command" \
-            -H "Content-Type: application/json" \
-            --user "$KUDU_USER:$KUDU_PASS" \
-            -d '{"command":"php artisan migrate --force 2>&1","dir":"/home/site/wwwroot"}')
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -1)
-          echo "$BODY"
-          if [ "$HTTP_CODE" != "200" ]; then exit 1; fi

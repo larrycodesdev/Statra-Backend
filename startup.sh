@@ -57,3 +57,6 @@ nginx -s reload
 php artisan config:clear
 php artisan config:cache
 php artisan route:cache
+
+# Run pending migrations
+php artisan migrate --force
