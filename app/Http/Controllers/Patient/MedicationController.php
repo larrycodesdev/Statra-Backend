@@ -70,15 +70,17 @@ class MedicationController extends Controller
 
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $request->user()->patient->medications()->findOrFail($id)->delete();
+        $medication = $request->user()->patient->medications()->findOrFail($id);
+        $medication->logs()->update(['medication_id' => null]);
+        $medication->delete();
         return ApiResponse::success(null, 'Medication removed.');
     }
 
     // GET /medications/log?date=2026-06-12&filter=all|taken|missed
     public function log(Request $request): JsonResponse
     {
-        $date    = $request->get('date', now()->toDateString());
-        $filter  = $request->get('filter', 'all');
+        $date    = $request->input('date', now()->toDateString());
+        $filter  = $request->input('filter', 'all');
         $patient = $request->user()->patient;
 
         $medications = $patient->medications()
