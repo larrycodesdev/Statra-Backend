@@ -16,4 +16,5 @@ cd /home/site/wwwroot
 
 php artisan config:clear
 php artisan config:cache
+php artisan route:clear
 php artisan migrate --force
