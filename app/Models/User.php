@@ -20,6 +20,7 @@ class User extends Authenticatable
         'first_name', 'last_name', 'username',
         'email', 'password',
         'role', 'phone', 'avatar', 'fcm_token',
+        'password_reset_otp', 'password_reset_otp_expires_at',
     ];
 
     protected $hidden = [
@@ -29,8 +30,9 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
+            'email_verified_at'              => 'datetime',
+            'password'                       => 'hashed',
+            'password_reset_otp_expires_at'  => 'datetime',
         ];
     }
 
