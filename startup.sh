@@ -18,3 +18,7 @@ php artisan config:clear
 php artisan config:cache
 php artisan route:clear
 php artisan migrate --force
+
+# Run the Laravel scheduler and queue worker as background processes
+php artisan schedule:work >> /home/site/wwwroot/storage/logs/scheduler.log 2>&1 &
+php artisan queue:work --sleep=3 --tries=3 >> /home/site/wwwroot/storage/logs/queue.log 2>&1 &
