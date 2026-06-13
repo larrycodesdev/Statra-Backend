@@ -333,6 +333,126 @@
                 }
             }
         },
+        "/api/v1/checkin/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Request a password-reset OTP",
+                "description": "Generates a 6-digit OTP valid for **10 minutes** and emails it to the address registered with the account.\n\nAlways returns the same response regardless of whether the username exists — this prevents username enumeration.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["username"],
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "example": "nurse01",
+                                        "description": "The username of the account to reset"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OTP dispatched (same response whether username is found or not)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "If that username has an email on file, a reset code has been sent."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error — username field missing"
+                    }
+                }
+            }
+        },
+        "/api/v1/checkin/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset password using the emailed OTP",
+                "description": "Verifies the 6-digit OTP, updates the password, and revokes **all** existing Sanctum tokens so stale sessions are invalidated. The user must log in again after a successful reset.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["username", "otp", "password", "password_confirmation"],
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "example": "nurse01"
+                                    },
+                                    "otp": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6,
+                                        "example": "482901",
+                                        "description": "6-digit code from the reset email — valid for 10 minutes"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 6,
+                                        "example": "newpass123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "newpass123",
+                                        "description": "Must match password exactly"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password reset — all existing tokens revoked, user must log in again",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Password reset successfully. Please log in."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid or expired OTP, or passwords do not match"
+                    }
+                }
+            }
+        },
         "/api/v1/checkin/check-in": {
             "post": {
                 "tags": [
