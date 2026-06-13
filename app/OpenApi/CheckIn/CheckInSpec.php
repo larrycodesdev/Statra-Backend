@@ -51,6 +51,34 @@ class CheckInSpec
      *   @OA\Response(response=200, description="Logged out")) */
     public function logout() {}
 
+    /** @OA\Post(path="/api/v1/checkin/auth/forgot-password", tags={"Auth"},
+     *   summary="Request a password-reset OTP — sent to the email registered with the account",
+     *   @OA\RequestBody(required=true, @OA\JsonContent(required={"username"},
+     *     @OA\Property(property="username", type="string", example="nurse01",
+     *       description="The username of the account whose password should be reset"))),
+     *   @OA\Response(response=200, description="OTP dispatched (same response whether username is found or not)",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="success", type="boolean", example=true),
+     *       @OA\Property(property="message", type="string",
+     *         example="If that username has an email on file, a reset code has been sent.")))) */
+    public function forgotPassword() {}
+
+    /** @OA\Post(path="/api/v1/checkin/auth/reset-password", tags={"Auth"},
+     *   summary="Reset password using the 6-digit OTP from the email",
+     *   @OA\RequestBody(required=true, @OA\JsonContent(
+     *     required={"username","otp","password","password_confirmation"},
+     *     @OA\Property(property="username",              type="string", example="nurse01"),
+     *     @OA\Property(property="otp",                  type="string", minLength=6, maxLength=6, example="482901",
+     *       description="6-digit code from the reset email — valid for 10 minutes"),
+     *     @OA\Property(property="password",              type="string", format="password", minLength=6, example="newpass123"),
+     *     @OA\Property(property="password_confirmation", type="string", format="password", example="newpass123"))),
+     *   @OA\Response(response=200, description="Password reset — all existing tokens revoked",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="success", type="boolean", example=true),
+     *       @OA\Property(property="message", type="string", example="Password reset successfully. Please log in."))),
+     *   @OA\Response(response=422, description="Invalid or expired OTP / validation error")) */
+    public function resetPassword() {}
+
     /** @OA\Post(path="/api/v1/checkin/check-in", tags={"CheckIn"},
      *   summary="Submit a check-in — risk score computed server-side and returned immediately",
      *   security={{"bearerAuth":{}}},
