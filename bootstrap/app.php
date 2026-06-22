@@ -28,12 +28,17 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')
                 ->prefix('api/v1/checkin')
                 ->group(base_path('routes/api_checkin.php'));
+
+            Route::middleware('api')
+                ->prefix('api/v1/store')
+                ->group(base_path('routes/api_store.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'patient' => EnsureIsPatient::class,
-            'doctor'  => EnsureIsDoctor::class,
+            'patient'     => EnsureIsPatient::class,
+            'doctor'      => EnsureIsDoctor::class,
+            'store.admin' => \App\Http\Middleware\StoreAdminToken::class,
 
             'ability'   => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
             'abilities' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,

@@ -57,4 +57,10 @@ return [
         'server_key' => env('FCM_SERVER_KEY'),
     ],
 
+    'korapay' => [
+        'secret_key'      => env('KORAPAY_SECRET_KEY'),
+        'encryption_key'  => env('KORAPAY_ENCRYPTION_KEY'),
+        'base_url'        => 'https://api.korapay.com/merchant/api/v1',
+    ],
+
 ];

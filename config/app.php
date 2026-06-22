@@ -123,4 +123,7 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'store_admin_token'  => env('STORE_ADMIN_TOKEN'),
+    'frontend_store_url' => env('FRONTEND_STORE_URL', 'http://localhost:3000'),
+
 ];
