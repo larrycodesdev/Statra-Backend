@@ -12,10 +12,6 @@
         {
             "url": "https://statrawebapp-f7gaa7bghfczhmf7.centralus-01.azurewebsites.net",
             "description": "Production"
-        },
-        {
-            "url": "http://localhost:8000",
-            "description": "Local dev"
         }
     ],
     "components": {

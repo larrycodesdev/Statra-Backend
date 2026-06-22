@@ -10,11 +10,7 @@
     },
     "servers": [
         {
-            "url": "http://localhost:8000",
-            "description": "Local dev"
-        },
-        {
-            "url": "https://api.scdwellness.app",
+            "url": "https://statrawebapp-f7gaa7bghfczhmf7.centralus-01.azurewebsites.net",
             "description": "Production"
         }
     ],
