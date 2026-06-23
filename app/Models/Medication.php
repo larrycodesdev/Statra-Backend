@@ -15,6 +15,8 @@ class Medication extends Model
     protected function casts(): array
     {
         return [
+            'patient_id'      => 'integer',
+            'frequency_count' => 'integer',
             'reminder_times'  => 'array',
             'remind_me'       => 'boolean',
             'active'          => 'boolean',
