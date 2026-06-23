@@ -8,7 +8,8 @@ class Symptom extends Model
 {
     protected $fillable = [
         'patient_id', 'symptom', 'severity', 'severity_label',
-        'body_locations', 'duration', 'triggers', 'on_medication',
+        'body_locations', 'pain_areas', 'pain_level',
+        'duration', 'triggers', 'on_medication',
         'notes', 'mood', 'edit_count', 'logged_at',
     ];
 
@@ -16,6 +17,8 @@ class Symptom extends Model
     {
         return [
             'body_locations' => 'array',
+            'pain_areas'     => 'array',
+            'pain_level'     => 'integer',
             'triggers'       => 'array',
             'on_medication'  => 'boolean',
             'logged_at'      => 'datetime',
