@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Log;
 class KorapayService
 {
     private string $baseUrl;
-    private string $secretKey;
-    private string $encryptionKey;
+    private ?string $secretKey;
+    private ?string $encryptionKey;
 
     public function __construct()
     {
@@ -21,6 +21,11 @@ class KorapayService
 
     public function initializeCheckout(BandOrder $order): ?string
     {
+        if (!$this->secretKey) {
+            Log::error('Korapay KORAPAY_SECRET_KEY is not set in environment.');
+            return null;
+        }
+
         $response = Http::withToken($this->secretKey)
             ->post("{$this->baseUrl}/charges/initialize", [
                 'reference'        => $order->order_number,
@@ -47,6 +52,11 @@ class KorapayService
 
     public function verifyWebhookSignature(string $rawPayload, string $signature): bool
     {
+        if (!$this->encryptionKey) {
+            Log::error('Korapay KORAPAY_ENCRYPTION_KEY is not set in environment.');
+            return false;
+        }
+
         $expected = hash_hmac('sha256', $rawPayload, $this->encryptionKey);
         return hash_equals($expected, $signature);
     }
