@@ -13,7 +13,7 @@ class ProfileController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $user    = $request->user()->load('patient.assignedDoctor.doctor');
+        $user    = $request->user()->load('patient.assignedDoctor.doctor', 'patient.emergencyContacts');
         $patient = $user->patient;
 
         return ApiResponse::success([
@@ -36,14 +36,15 @@ class ProfileController extends Controller
             'blood_type' => $patient->blood_type,
             'condition'  => $patient->condition ?? [],
 
-            // Emergency contact
-            'emergency_contact' => [
-                'name'         => $patient->emergency_contact_name,
-                'phone'        => $patient->emergency_contact_phone,
-                'email'        => $patient->emergency_contact_email,
-                'address'      => $patient->emergency_contact_address,
-                'relationship' => $patient->emergency_contact_relationship,
-            ],
+            // Emergency contacts
+            'emergency_contacts' => $patient->emergencyContacts->map(fn($c) => [
+                'id'           => $c->id,
+                'name'         => $c->name,
+                'phone'        => $c->phone,
+                'email'        => $c->email,
+                'address'      => $c->address,
+                'relationship' => $c->relationship,
+            ])->values()->all(),
 
             // Care team
             'care_team' => $this->careTeam($patient),
@@ -87,23 +88,29 @@ class ProfileController extends Controller
 
     public function updateEmergencyContacts(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'name'         => ['required', 'string', 'max:255'],
-            'phone'        => ['required', 'string', 'max:20'],
-            'email'        => ['nullable', 'email', 'max:255'],
-            'address'      => ['nullable', 'string', 'max:500'],
-            'relationship' => ['nullable', 'string', 'max:100'],
+        $request->validate([
+            'contacts'                => ['required', 'array', 'min:1', 'max:5'],
+            'contacts.*.name'         => ['required', 'string', 'max:255'],
+            'contacts.*.phone'        => ['required', 'string', 'max:20'],
+            'contacts.*.email'        => ['nullable', 'email', 'max:255'],
+            'contacts.*.address'      => ['nullable', 'string', 'max:500'],
+            'contacts.*.relationship' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $request->user()->patient->update([
-            'emergency_contact_name'         => $data['name'],
-            'emergency_contact_phone'        => $data['phone'],
-            'emergency_contact_email'        => $data['email'] ?? null,
-            'emergency_contact_address'      => $data['address'] ?? null,
-            'emergency_contact_relationship' => $data['relationship'] ?? null,
-        ]);
+        $patient = $request->user()->patient;
 
-        return ApiResponse::success(null, 'Emergency contact updated.');
+        $patient->emergencyContacts()->delete();
+        $patient->emergencyContacts()->createMany(
+            collect($request->contacts)->map(fn($c) => [
+                'name'         => $c['name'],
+                'phone'        => $c['phone'],
+                'email'        => $c['email'] ?? null,
+                'address'      => $c['address'] ?? null,
+                'relationship' => $c['relationship'] ?? null,
+            ])->all()
+        );
+
+        return ApiResponse::success(null, 'Emergency contacts updated.');
     }
 
     public function updateMedicalInfo(Request $request): JsonResponse

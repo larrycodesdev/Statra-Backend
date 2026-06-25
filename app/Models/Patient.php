@@ -8,11 +8,7 @@ class Patient extends Model
 {
     protected $fillable = [
         'user_id', 'genotype', 'blood_type', 'date_of_birth',
-        'gender', 'condition',
-        'emergency_contact_name', 'emergency_contact_phone',
-        'emergency_contact_email', 'emergency_contact_address',
-        'emergency_contact_relationship',
-        'assigned_doctor_id',
+        'gender', 'condition', 'assigned_doctor_id',
     ];
 
     protected function casts(): array
@@ -36,6 +32,11 @@ class Patient extends Model
     public function settings(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(PatientSettings::class);
+    }
+
+    public function emergencyContacts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(EmergencyContact::class);
     }
 
     public function devices(): \Illuminate\Database\Eloquent\Relations\HasMany
