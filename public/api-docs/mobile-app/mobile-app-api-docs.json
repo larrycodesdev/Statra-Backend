@@ -501,7 +501,8 @@
         "/api/v1/patient/device/register": {
             "post": {
                 "tags": ["Patient Device"],
-                "summary": "Register or update the connected JCVital wearable",
+                "summary": "Register or re-pair the connected wearable band",
+                "description": "Registers a new band or re-pairs an existing one.\n\n**Replacement band:** if the `device_id` is different from any previously registered device, all existing active devices for this patient are automatically deactivated before the new one is created. Historical readings from the old band are preserved.\n\n**Re-pairing same band:** if the `device_id` already exists for this patient, it is simply updated (no deactivation occurs).",
                 "security": [{ "bearerAuth": [] }],
                 "requestBody": {
                     "required": true,
@@ -510,16 +511,41 @@
                             "schema": {
                                 "required": ["device_id", "platform"],
                                 "properties": {
-                                    "device_id": { "type": "string", "example": "JCV-2208A-001" },
-                                    "device_model": { "type": "string", "example": "JCVital 2208A" },
+                                    "device_id":        { "type": "string", "example": "JCV-2208A-001", "description": "Unique hardware ID from the band" },
+                                    "device_model":     { "type": "string", "example": "JCVital 2208A" },
                                     "firmware_version": { "type": "string", "example": "2.1.4" },
-                                    "platform": { "type": "string", "enum": ["android", "ios"], "example": "android" }
+                                    "platform":         { "type": "string", "enum": ["android", "ios"], "example": "android" }
                                 }
                             }
                         }
                     }
                 },
-                "responses": { "201": { "description": "Device registered", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } } }
+                "responses": {
+                    "201": {
+                        "description": "Device registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean", "example": true },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id":               { "type": "integer", "example": 4 },
+                                                "device_id":        { "type": "string", "example": "JCV-2208A-001" },
+                                                "device_model":     { "type": "string", "example": "JCVital 2208A" },
+                                                "firmware_version": { "type": "string", "example": "2.1.4" },
+                                                "platform":         { "type": "string", "example": "android" },
+                                                "is_active":        { "type": "boolean", "example": true }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/v1/patient/device/status": {
