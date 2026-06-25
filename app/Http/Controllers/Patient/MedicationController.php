@@ -11,12 +11,34 @@ class MedicationController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $medications = $request->user()->patient
-            ->medications()
-            ->orderByDesc('created_at')
-            ->get();
+        $patient = $request->user()->patient;
+        $today   = now()->toDateString();
 
-        return ApiResponse::success($medications);
+        $medications = $patient->medications()->orderByDesc('created_at')->get();
+
+        // Load today's logs in one query, grouped by medication_id
+        $todayLogs = $patient->medicationLogs()
+            ->whereDate('scheduled_at', $today)
+            ->get()
+            ->groupBy('medication_id');
+
+        $result = $medications->map(function ($medication) use ($todayLogs) {
+            $expectedDoses = count($medication->reminder_times ?? ['08:00']);
+            $logs          = $todayLogs->get($medication->id, collect());
+            $takenCount    = $logs->where('status', 'taken')->count();
+            $missedCount   = $logs->where('status', 'missed')->count();
+
+            $todayStatus = match (true) {
+                ($takenCount + $missedCount) === 0 => 'pending',
+                $takenCount === $expectedDoses     => 'taken',
+                $missedCount === $expectedDoses    => 'missed',
+                default                            => 'partial',
+            };
+
+            return array_merge($medication->toArray(), ['today_status' => $todayStatus]);
+        });
+
+        return ApiResponse::success($result);
     }
 
     public function store(Request $request): JsonResponse

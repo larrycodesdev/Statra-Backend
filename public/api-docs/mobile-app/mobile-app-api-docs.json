@@ -1175,8 +1175,9 @@
                                                     "begin_date": { "type": "string", "format": "date", "nullable": true },
                                                     "end_date": { "type": "string", "format": "date", "nullable": true },
                                                     "reminder_times": { "type": "array", "items": { "type": "string" }, "example": ["08:00", "20:00"] },
-                                                    "remind_me": { "type": "boolean" },
-                                                    "active": { "type": "boolean" }
+                                                    "remind_me":      { "type": "boolean" },
+                                                    "active":         { "type": "boolean" },
+                                                    "today_status":   { "type": "string", "enum": ["pending", "taken", "missed", "partial"], "example": "taken", "description": "Today's dose status. pending = not yet logged, taken = all doses taken, missed = all doses missed, partial = some taken/missed" }
                                                 }
                                             }
                                         }
