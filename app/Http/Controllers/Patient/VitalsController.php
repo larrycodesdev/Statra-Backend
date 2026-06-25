@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Patient;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Jobs\ProcessVitalBatch;
-use App\Models\Device;
 use App\Services\VitalProcessor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,25 +13,29 @@ class VitalsController extends Controller
 {
     public function sync(Request $request, VitalProcessor $processor): JsonResponse
     {
-        $data = $request->validate([
-            'device_id' => ['required', 'string'],
-            'readings'  => ['required', 'array', 'min:1', 'max:500'],
-        ]);
+        $readings = $request->json()->all();
+
+        if (!is_array($readings) || empty($readings)) {
+            return ApiResponse::error('Request body must be a non-empty JSON array.', 422);
+        }
+
+        if (count($readings) > 500) {
+            return ApiResponse::error('Maximum 500 readings per batch.', 422);
+        }
 
         $patient = $request->user()->patient;
 
-        // Verify the device belongs to this patient
-        $device = Device::where('device_id', $data['device_id'])
-            ->where('patient_id', $patient->id)
-            ->where('is_active', true)
-            ->first();
+        $device = $patient->devices()->where('is_active', true)->first();
 
         if (!$device) {
-            return ApiResponse::error('Device not found or not registered to your account.', 404);
+            return ApiResponse::error('No active band registered. Please register your device first.', 404);
         }
 
-        // Validate and normalize all readings before dispatching
-        $normalized = $processor->validateAndNormalize($data['readings']);
+        $normalized = $processor->normalizeFromBand($readings);
+
+        if (empty($normalized)) {
+            return ApiResponse::success(['queued' => 0], 'No valid readings to process.');
+        }
 
         ProcessVitalBatch::dispatch($normalized, $patient->id, $device->id);
 
@@ -46,7 +49,7 @@ class VitalsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $request->validate([
-            'type'  => ['nullable', 'in:heart_rate,spo2,temperature,blood_pressure,steps,sleep_state,hrv'],
+            'type'  => ['nullable', 'in:heart_rate,spo2,temperature,blood_pressure,steps,sleep_state,hrv,calories,stress'],
             'range' => ['nullable', 'in:1h,6h,24h,7d,30d'],
         ]);
 
