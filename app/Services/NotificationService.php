@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Alert;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use App\Services\FcmService;
 
 class NotificationService
 {
@@ -50,12 +51,8 @@ class NotificationService
 
     private function sendFcm(string $token, array $notification, array $data = []): void
     {
-        // FCM HTTP v1 API — uses kutia/laravel-fcm under the hood
-        // This is a stub; once FCM credentials are configured in .env,
-        // replace with the actual FCM library call.
         try {
-            $client = app('fcm');
-            $client->send($token, $notification, $data);
+            (new FcmService())->send($token, $notification, $data);
         } catch (\Throwable $e) {
             Log::error('FCM send failed', ['token' => substr($token, 0, 10), 'error' => $e->getMessage()]);
         }

@@ -53,8 +53,8 @@ return [
         'redirect'      => 'http://localhost',
     ],
 
-    'fcm' => [
-        'server_key' => env('FCM_SERVER_KEY'),
+    'firebase' => [
+        'credentials_json' => env('FIREBASE_CREDENTIALS_JSON'),
     ],
 
     'korapay' => [
