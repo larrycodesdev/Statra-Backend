@@ -13,7 +13,7 @@ class VitalsController extends Controller
 {
     public function sync(Request $request, VitalProcessor $processor): JsonResponse
     {
-        $readings = $request->json()->all();
+        $readings = json_decode($request->getContent(), true);
 
         if (!is_array($readings) || empty($readings)) {
             return ApiResponse::error('Request body must be a non-empty JSON array.', 422);
