@@ -21,6 +21,15 @@ class DeviceController extends Controller
 
         $patient = $request->user()->patient;
 
+        // New band (different device_id) — deactivate the old one first
+        $isNewDevice = !Device::where('device_id', $data['device_id'])
+            ->where('patient_id', $patient->id)
+            ->exists();
+
+        if ($isNewDevice) {
+            $patient->devices()->where('is_active', true)->update(['is_active' => false]);
+        }
+
         $device = Device::updateOrCreate(
             ['device_id' => $data['device_id']],
             [
