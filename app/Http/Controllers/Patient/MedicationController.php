@@ -138,7 +138,12 @@ class MedicationController extends Controller
                 ];
 
                 $medLogs = $logs->get($medication->id);
-                $matchedLog = $medLogs?->firstWhere('scheduled_at', $scheduledAt);
+
+                // Compare by time only — scheduled_at is a Carbon instance,
+                // string comparison with "HH:MM" would fail due to seconds/timezone
+                $matchedLog = $medLogs?->first(
+                    fn($log) => $log->scheduled_at->format('H:i') === $time
+                );
 
                 if ($matchedLog) {
                     $history[] = array_merge($entry, [
@@ -151,10 +156,13 @@ class MedicationController extends Controller
             }
         }
 
+        // Apply filter — when filtering by taken/missed, upcoming is irrelevant
         if ($filter === 'taken') {
-            $history = array_filter($history, fn($h) => $h['status'] === 'taken');
+            $history  = array_values(array_filter($history, fn($h) => $h['status'] === 'taken'));
+            $upcoming = [];
         } elseif ($filter === 'missed') {
-            $history = array_filter($history, fn($h) => $h['status'] === 'missed');
+            $history  = array_values(array_filter($history, fn($h) => $h['status'] === 'missed'));
+            $upcoming = [];
         }
 
         return ApiResponse::success([

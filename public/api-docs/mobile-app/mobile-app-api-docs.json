@@ -1084,11 +1084,11 @@
             "get": {
                 "tags": ["Patient Medications"],
                 "summary": "Get daily medication schedule (upcoming + history)",
-                "description": "Returns two lists for a given date: `upcoming` (not yet logged) and `history` (taken or missed). Use this to render the Medication Log screen.",
+                "description": "Returns two lists for a given date: `upcoming` (not yet logged) and `history` (taken or missed). When `filter=taken` or `filter=missed`, the `upcoming` list is empty — only matching history entries are returned.",
                 "security": [{ "bearerAuth": [] }],
                 "parameters": [
                     { "name": "date", "in": "query", "description": "Date to fetch schedule for (defaults to today)", "schema": { "type": "string", "format": "date", "example": "2026-06-12" } },
-                    { "name": "filter", "in": "query", "description": "Filter history results", "schema": { "type": "string", "enum": ["all", "taken", "missed"], "default": "all" } }
+                    { "name": "filter", "in": "query", "description": "Filter results. `all` = upcoming + full history. `taken` / `missed` = only matching history entries, upcoming is empty.", "schema": { "type": "string", "enum": ["all", "taken", "missed"], "default": "all" } }
                 ],
                 "responses": {
                     "200": {
@@ -1105,28 +1105,33 @@
                                                 "date": { "type": "string", "format": "date", "example": "2026-06-12" },
                                                 "upcoming": {
                                                     "type": "array",
+                                                    "description": "Doses not yet logged for the requested date. Empty when filter=taken or filter=missed.",
                                                     "items": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "medication_id": { "type": "integer" },
-                                                            "name": { "type": "string", "example": "Hydroxyurea 500mg" },
-                                                            "dosage": { "type": "string", "example": "1 tablet" },
+                                                            "medication_id":  { "type": "integer" },
+                                                            "name":           { "type": "string", "example": "Hydroxyurea 500mg" },
+                                                            "dosage":         { "type": "string", "example": "1 tablet" },
+                                                            "frequency":      { "type": "string", "example": "daily", "nullable": true },
                                                             "scheduled_time": { "type": "string", "example": "08:00" },
-                                                            "scheduled_at": { "type": "string", "example": "2026-06-12 08:00" }
+                                                            "scheduled_at":   { "type": "string", "example": "2026-06-12 08:00" }
                                                         }
                                                     }
                                                 },
                                                 "history": {
                                                     "type": "array",
+                                                    "description": "Doses that have been marked taken or missed.",
                                                     "items": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "medication_id": { "type": "integer" },
-                                                            "name": { "type": "string" },
-                                                            "dosage": { "type": "string" },
-                                                            "scheduled_time": { "type": "string" },
-                                                            "status": { "type": "string", "enum": ["taken", "missed"] },
-                                                            "taken_at": { "type": "string", "format": "date-time", "nullable": true }
+                                                            "medication_id":  { "type": "integer" },
+                                                            "name":           { "type": "string", "example": "Hydroxyurea 500mg" },
+                                                            "dosage":         { "type": "string", "example": "1 tablet" },
+                                                            "frequency":      { "type": "string", "example": "daily", "nullable": true },
+                                                            "scheduled_time": { "type": "string", "example": "08:00" },
+                                                            "scheduled_at":   { "type": "string", "example": "2026-06-12 08:00" },
+                                                            "status":         { "type": "string", "enum": ["taken", "missed"] },
+                                                            "taken_at":       { "type": "string", "format": "date-time", "nullable": true }
                                                         }
                                                     }
                                                 },
