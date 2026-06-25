@@ -442,6 +442,54 @@
                 "responses": { "200": { "description": "Emergency contacts updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } } }
             }
         },
+        "/api/v1/patient/profile/avatar": {
+            "post": {
+                "tags": ["Patient Profile"],
+                "summary": "Upload or replace profile avatar",
+                "description": "Send the image as `multipart/form-data` with field name `avatar`.\n\nAccepted formats: JPG, JPEG, PNG, WEBP. Max size: 5MB.\n\nThe previous avatar is automatically deleted from storage. The response returns the new public URL which is also saved to the profile.",
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": ["avatar"],
+                                "properties": {
+                                    "avatar": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "description": "Image file — JPG, JPEG, PNG or WEBP, max 5MB"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Avatar uploaded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean", "example": true },
+                                        "message": { "type": "string", "example": "Avatar uploaded successfully." },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "avatar": { "type": "string", "example": "https://pub-xxx.r2.dev/avatars/12/uuid.jpg" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": { "description": "Not an image / exceeds 5MB / wrong format" }
+                }
+            }
+        },
         "/api/v1/patient/profile/fcm-token": {
             "put": {
                 "tags": ["Patient Profile"],

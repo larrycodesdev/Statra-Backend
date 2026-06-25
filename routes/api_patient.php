@@ -38,6 +38,7 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     Route::put('profile/emergency-contacts',       [ProfileController::class, 'updateEmergencyContacts']);
     Route::put('profile/medical-info',             [ProfileController::class, 'updateMedicalInfo']);
     Route::put('profile/fcm-token',                [ProfileController::class, 'updateFcmToken']);
+    Route::post('profile/avatar',                  [ProfileController::class, 'uploadAvatar']);
 
     // Settings
     Route::get('settings', [SettingsController::class, 'show']);

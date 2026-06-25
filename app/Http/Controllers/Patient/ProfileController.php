@@ -7,6 +7,8 @@ use App\Http\Responses\ApiResponse;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
@@ -60,7 +62,7 @@ class ProfileController extends Controller
             'last_name'  => ['sometimes', 'string', 'max:100'],
             'username'   => ['sometimes', 'string', 'max:30', 'alpha_dash', Rule::unique('users', 'username')->ignore($user->id)],
             'phone'      => ['sometimes', 'nullable', 'string', 'max:20'],
-            'avatar'     => ['sometimes', 'nullable', 'url', 'max:500'],
+            'avatar'     => ['sometimes', 'nullable', 'string', 'max:500'],
             'gender'     => ['sometimes', 'in:male,female,other'],
             'date_of_birth' => ['sometimes', 'nullable', 'date'],
         ]);
@@ -125,6 +127,33 @@ class ProfileController extends Controller
         $request->user()->patient->update($data);
 
         return ApiResponse::success(null, 'Medical info updated.');
+    }
+
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $user = $request->user();
+
+        // Delete old avatar from R2 if it exists
+        if ($user->avatar) {
+            $oldPath = ltrim(parse_url($user->avatar, PHP_URL_PATH), '/');
+            Storage::disk('r2')->delete($oldPath);
+        }
+
+        $file      = $request->file('avatar');
+        $extension = $file->getClientOriginalExtension();
+        $path      = 'avatars/' . $user->id . '/' . Str::uuid() . '.' . $extension;
+
+        Storage::disk('r2')->put($path, file_get_contents($file), 'public');
+
+        $url = rtrim(config('filesystems.disks.r2.url'), '/') . '/' . $path;
+
+        $user->update(['avatar' => $url]);
+
+        return ApiResponse::success(['avatar' => $url], 'Avatar uploaded successfully.');
     }
 
     public function updateFcmToken(Request $request, NotificationService $notificationService): JsonResponse
