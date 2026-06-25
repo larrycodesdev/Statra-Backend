@@ -534,35 +534,60 @@
             "post": {
                 "tags": ["Patient Vitals"],
                 "summary": "Sync a batch of readings from the wearable",
-                "description": "Returns **202 Accepted** immediately.\nThe batch is processed asynchronously — the queue worker evaluates each reading\nagainst alert thresholds and fires push notifications if any are breached.\n",
+                "description": "Send a **bare JSON array** — no wrapper object.\n\nThe active device is resolved automatically from the patient's account (no `device_id` needed).\nReturns **202 Accepted** immediately; the batch is processed asynchronously.\nFields with value `0` / `0.0` / `\"\"` are ignored — only non-zero sensor readings are stored.\n\n**Blood pressure:** both `highBP` and `lowBP` must be > 0 to be stored.\n**spo2Date / bpDate:** if empty, the main `timestamp` is used as the recorded time.",
                 "security": [{ "bearerAuth": [] }],
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": ["device_id", "readings"],
-                                "properties": {
-                                    "device_id": { "type": "string", "example": "JCV-2208A-001" },
-                                    "readings": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "required": ["type", "value", "unit", "recorded_at"],
-                                            "properties": {
-                                                "type": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv"] },
-                                                "value": { "description": "Number for most types; {systolic, diastolic} object for blood_pressure" },
-                                                "unit": { "type": "string", "example": "bpm" },
-                                                "recorded_at": { "type": "string", "format": "date-time" }
-                                            }
-                                        }
+                                "type": "array",
+                                "maxItems": 500,
+                                "items": {
+                                    "type": "object",
+                                    "required": ["timestamp"],
+                                    "properties": {
+                                        "timestamp":  { "type": "string", "format": "date-time", "example": "2026-06-20T10:30:00.000Z", "description": "Required — ISO 8601 capture time" },
+                                        "heartRate":  { "type": "integer", "example": 72, "default": 0 },
+                                        "temp":       { "type": "number", "format": "float", "example": 36.6, "default": 0.0 },
+                                        "steps":      { "type": "integer", "example": 4500, "default": 0 },
+                                        "calories":   { "type": "number", "format": "float", "example": 250.5, "default": 0.0 },
+                                        "spo2":       { "type": "integer", "example": 98, "default": 0 },
+                                        "spo2Date":   { "type": "string", "format": "date", "example": "2026-06-20", "default": "" },
+                                        "highBP":     { "type": "integer", "example": 120, "default": 0, "description": "Systolic BP" },
+                                        "lowBP":      { "type": "integer", "example": 80, "default": 0, "description": "Diastolic BP" },
+                                        "stress":     { "type": "integer", "example": 15, "default": 0 },
+                                        "bpDate":     { "type": "string", "format": "date", "example": "2026-06-20", "default": "" }
                                     }
                                 }
                             }
                         }
                     }
                 },
-                "responses": { "202": { "description": "Accepted — batch queued for processing" } }
+                "responses": {
+                    "202": {
+                        "description": "Accepted — batch queued for processing",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean", "example": true },
+                                        "message": { "type": "string", "example": "Vitals accepted for processing." },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "queued": { "type": "integer", "example": 14, "description": "Total individual readings queued (one per non-zero field per object)" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": { "description": "No active band registered — call /device/register first" },
+                    "422": { "description": "Body is not a valid JSON array, or a timestamp is missing" }
+                }
             }
         },
         "/api/v1/patient/vitals": {
@@ -571,7 +596,7 @@
                 "summary": "Get vitals history with optional filters",
                 "security": [{ "bearerAuth": [] }],
                 "parameters": [
-                    { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv"] } },
+                    { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv", "calories", "stress"] } },
                     { "name": "range", "in": "query", "schema": { "type": "string", "enum": ["7d", "30d", "90d"], "default": "7d" } }
                 ],
                 "responses": { "200": { "description": "Vitals list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedResponse" } } } } }
@@ -758,6 +783,8 @@
                                     "severity": { "type": "integer", "minimum": 1, "maximum": 10, "example": 7 },
                                     "severity_label": { "type": "string", "enum": ["none", "mild", "moderate", "severe"], "nullable": true },
                                     "body_locations": { "type": "array", "items": { "type": "string" }, "example": ["chest", "back"], "nullable": true },
+                                    "pain_areas": { "type": "array", "items": { "type": "string" }, "example": ["left knee", "lower back"], "nullable": true, "description": "Specific pain locations (free-form strings)" },
+                                    "pain_level": { "type": "integer", "minimum": 0, "maximum": 10, "example": 6, "nullable": true, "description": "Pain intensity on a 0–10 scale" },
                                     "duration": { "type": "string", "example": "2 hours", "nullable": true },
                                     "triggers": { "type": "array", "items": { "type": "string" }, "example": ["cold weather", "stress"], "nullable": true },
                                     "on_medication": { "type": "boolean", "example": true },
@@ -806,6 +833,8 @@
                                     "severity": { "type": "integer", "minimum": 1, "maximum": 10 },
                                     "severity_label": { "type": "string", "enum": ["none", "mild", "moderate", "severe"], "nullable": true },
                                     "body_locations": { "type": "array", "items": { "type": "string" }, "nullable": true },
+                                    "pain_areas": { "type": "array", "items": { "type": "string" }, "example": ["left knee", "lower back"], "nullable": true, "description": "Specific pain locations (free-form strings)" },
+                                    "pain_level": { "type": "integer", "minimum": 0, "maximum": 10, "example": 6, "nullable": true, "description": "Pain intensity on a 0–10 scale" },
                                     "duration": { "type": "string", "nullable": true },
                                     "triggers": { "type": "array", "items": { "type": "string" }, "nullable": true },
                                     "on_medication": { "type": "boolean" },
@@ -983,7 +1012,36 @@
                     { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
                 ],
                 "responses": {
-                    "200": { "description": "Medication detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
+                    "200": {
+                        "description": "Medication detail",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean", "example": true },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id":              { "type": "integer", "example": 1 },
+                                                "patient_id":      { "type": "integer", "example": 3 },
+                                                "name":            { "type": "string", "example": "Hydroxyurea 500mg" },
+                                                "dosage":          { "type": "string", "example": "1 tablet", "nullable": true },
+                                                "time_to_use":     { "type": "string", "example": "morning", "nullable": true },
+                                                "frequency":       { "type": "string", "example": "daily", "nullable": true },
+                                                "frequency_count": { "type": "integer", "example": 2 },
+                                                "begin_date":      { "type": "string", "format": "date", "nullable": true },
+                                                "end_date":        { "type": "string", "format": "date", "nullable": true },
+                                                "reminder_times":  { "type": "array", "items": { "type": "string" }, "example": ["08:00", "20:00"] },
+                                                "remind_me":       { "type": "boolean", "example": true },
+                                                "active":          { "type": "boolean", "example": true }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     "404": { "description": "Not found" }
                 }
             },
@@ -1016,7 +1074,36 @@
                     }
                 },
                 "responses": {
-                    "200": { "description": "Medication updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
+                    "200": {
+                        "description": "Medication updated — returns the updated medication plan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean", "example": true },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id":              { "type": "integer", "example": 1 },
+                                                "patient_id":      { "type": "integer", "example": 3 },
+                                                "name":            { "type": "string", "example": "Hydroxyurea 500mg" },
+                                                "dosage":          { "type": "string", "example": "1 tablet", "nullable": true },
+                                                "time_to_use":     { "type": "string", "example": "morning", "nullable": true },
+                                                "frequency":       { "type": "string", "example": "daily", "nullable": true },
+                                                "frequency_count": { "type": "integer", "example": 2 },
+                                                "begin_date":      { "type": "string", "format": "date", "nullable": true },
+                                                "end_date":        { "type": "string", "format": "date", "nullable": true },
+                                                "reminder_times":  { "type": "array", "items": { "type": "string" }, "example": ["08:00", "20:00"] },
+                                                "remind_me":       { "type": "boolean", "example": true },
+                                                "active":          { "type": "boolean", "example": true }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     "404": { "description": "Not found" }
                 }
             },
@@ -1369,7 +1456,7 @@
                 "security": [{ "bearerAuth": [] }],
                 "parameters": [
                     { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
-                    { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv"] } },
+                    { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv", "calories", "stress"] } },
                     { "name": "range", "in": "query", "schema": { "type": "string", "enum": ["7d", "30d", "90d"] } }
                 ],
                 "responses": { "200": { "description": "Vitals data", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } } }
@@ -1516,7 +1603,7 @@
                 "security": [{ "bearerAuth": [] }],
                 "parameters": [
                     { "name": "patient_id", "in": "query", "schema": { "type": "integer" } },
-                    { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv"] } },
+                    { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv", "calories", "stress"] } },
                     { "name": "range", "in": "query", "schema": { "type": "string", "enum": ["7d", "30d", "90d"] } }
                 ],
                 "responses": { "200": { "description": "Trend data", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } } }
