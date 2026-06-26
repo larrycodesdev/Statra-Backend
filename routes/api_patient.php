@@ -35,7 +35,8 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     // Profile
     Route::get('profile',                          [ProfileController::class, 'show']);
     Route::put('profile',                          [ProfileController::class, 'update']);
-    Route::put('profile/emergency-contacts',       [ProfileController::class, 'updateEmergencyContacts']);
+    Route::post('profile/emergency-contacts',          [ProfileController::class, 'addEmergencyContact']);
+    Route::delete('profile/emergency-contacts/{id}',   [ProfileController::class, 'removeEmergencyContact']);
     Route::put('profile/medical-info',             [ProfileController::class, 'updateMedicalInfo']);
     Route::put('profile/fcm-token',                [ProfileController::class, 'updateFcmToken']);
     Route::post('profile/avatar',                  [ProfileController::class, 'uploadAvatar']);

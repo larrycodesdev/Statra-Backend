@@ -402,44 +402,71 @@
             }
         },
         "/api/v1/patient/profile/emergency-contacts": {
-            "put": {
+            "post": {
                 "tags": ["Patient Profile"],
-                "summary": "Replace all emergency contacts",
-                "description": "Replaces the full list of emergency contacts. Send all contacts each time — existing ones are deleted and recreated. Maximum 5 contacts.",
+                "summary": "Add one emergency contact",
+                "description": "Adds a single emergency contact to the patient's list. Maximum 5 contacts total — returns 422 if the limit is already reached.",
                 "security": [{ "bearerAuth": [] }],
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": ["contacts"],
+                                "required": ["name", "phone"],
                                 "properties": {
-                                    "contacts": {
-                                        "type": "array",
-                                        "minItems": 1,
-                                        "maxItems": 5,
-                                        "items": {
-                                            "type": "object",
-                                            "required": ["name", "phone"],
-                                            "properties": {
-                                                "name":         { "type": "string", "example": "Joseph Johnson" },
-                                                "phone":        { "type": "string", "example": "+234 80 333 57163" },
-                                                "email":        { "type": "string", "example": "joseph@gmail.com", "nullable": true },
-                                                "address":      { "type": "string", "example": "5 Herbert Road Houston", "nullable": true },
-                                                "relationship": { "type": "string", "example": "Brother", "nullable": true }
-                                            }
-                                        },
-                                        "example": [
-                                            { "name": "Joseph Johnson", "phone": "+234 80 333 57163", "email": "joseph@gmail.com", "relationship": "Brother" },
-                                            { "name": "Mary Johnson", "phone": "+234 81 222 33344", "relationship": "Mother" }
-                                        ]
-                                    }
+                                    "name":         { "type": "string", "example": "Joseph Johnson" },
+                                    "phone":        { "type": "string", "example": "+234 80 333 57163" },
+                                    "email":        { "type": "string", "example": "joseph@gmail.com", "nullable": true },
+                                    "address":      { "type": "string", "example": "5 Herbert Road Houston", "nullable": true },
+                                    "relationship": { "type": "string", "example": "Brother", "nullable": true }
                                 }
                             }
                         }
                     }
                 },
-                "responses": { "200": { "description": "Emergency contacts updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } } }
+                "responses": {
+                    "201": {
+                        "description": "Contact added",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean", "example": true },
+                                        "message": { "type": "string", "example": "Emergency contact added." },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id":           { "type": "integer", "example": 3 },
+                                                "name":         { "type": "string", "example": "Joseph Johnson" },
+                                                "phone":        { "type": "string", "example": "+234 80 333 57163" },
+                                                "email":        { "type": "string", "nullable": true },
+                                                "address":      { "type": "string", "nullable": true },
+                                                "relationship": { "type": "string", "example": "Brother", "nullable": true }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": { "description": "Maximum 5 contacts reached", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+                }
+            }
+        },
+        "/api/v1/patient/profile/emergency-contacts/{id}": {
+            "delete": {
+                "tags": ["Patient Profile"],
+                "summary": "Remove an emergency contact",
+                "description": "Deletes a single emergency contact by its ID. The `id` is returned when adding a contact or in the profile response.",
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 3 }
+                ],
+                "responses": {
+                    "200": { "description": "Contact removed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
+                    "404": { "description": "Contact not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+                }
             }
         },
         "/api/v1/patient/profile/avatar": {

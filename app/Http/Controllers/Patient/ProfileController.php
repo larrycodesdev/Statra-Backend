@@ -88,31 +88,34 @@ class ProfileController extends Controller
         return ApiResponse::success(null, 'Profile updated successfully.');
     }
 
-    public function updateEmergencyContacts(Request $request): JsonResponse
+    public function addEmergencyContact(Request $request): JsonResponse
     {
-        $request->validate([
-            'contacts'                => ['required', 'array', 'min:1', 'max:5'],
-            'contacts.*.name'         => ['required', 'string', 'max:255'],
-            'contacts.*.phone'        => ['required', 'string', 'max:20'],
-            'contacts.*.email'        => ['nullable', 'email', 'max:255'],
-            'contacts.*.address'      => ['nullable', 'string', 'max:500'],
-            'contacts.*.relationship' => ['nullable', 'string', 'max:100'],
-        ]);
-
         $patient = $request->user()->patient;
 
-        $patient->emergencyContacts()->delete();
-        $patient->emergencyContacts()->createMany(
-            collect($request->contacts)->map(fn($c) => [
-                'name'         => $c['name'],
-                'phone'        => $c['phone'],
-                'email'        => $c['email'] ?? null,
-                'address'      => $c['address'] ?? null,
-                'relationship' => $c['relationship'] ?? null,
-            ])->all()
-        );
+        if ($patient->emergencyContacts()->count() >= 5) {
+            return ApiResponse::error('Maximum of 5 emergency contacts allowed.', 422);
+        }
 
-        return ApiResponse::success(null, 'Emergency contacts updated.');
+        $data = $request->validate([
+            'name'         => ['required', 'string', 'max:255'],
+            'phone'        => ['required', 'string', 'max:20'],
+            'email'        => ['nullable', 'email', 'max:255'],
+            'address'      => ['nullable', 'string', 'max:500'],
+            'relationship' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $contact = $patient->emergencyContacts()->create($data);
+
+        return ApiResponse::created($contact, 'Emergency contact added.');
+    }
+
+    public function removeEmergencyContact(Request $request, int $id): JsonResponse
+    {
+        $patient = $request->user()->patient;
+        $contact = $patient->emergencyContacts()->findOrFail($id);
+        $contact->delete();
+
+        return ApiResponse::success(null, 'Emergency contact removed.');
     }
 
     public function updateMedicalInfo(Request $request): JsonResponse
