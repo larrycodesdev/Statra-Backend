@@ -98,6 +98,14 @@ class MedicationController extends Controller
         return ApiResponse::success(null, 'Medication removed.');
     }
 
+    public function clearAll(Request $request): JsonResponse
+    {
+        $patient = $request->user()->patient;
+        $patient->medicationLogs()->delete();
+        $patient->medications()->delete();
+        return ApiResponse::success(null, 'All medications and logs cleared.');
+    }
+
     // GET /medications/log?date=2026-06-12&filter=all|taken|missed
     public function log(Request $request): JsonResponse
     {

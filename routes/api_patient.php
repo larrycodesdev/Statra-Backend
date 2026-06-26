@@ -60,14 +60,16 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     Route::patch('notifications/{id}/read',       [NotificationController::class, 'markRead']);
 
     // Symptoms
-    Route::get('symptoms/stats',   [SymptomController::class, 'stats']);
-    Route::get('symptoms',         [SymptomController::class, 'index']);
-    Route::post('symptoms',        [SymptomController::class, 'store']);
-    Route::get('symptoms/{id}',    [SymptomController::class, 'show']);
-    Route::put('symptoms/{id}',    [SymptomController::class, 'update']);
-    Route::delete('symptoms/{id}', [SymptomController::class, 'destroy']);
+    Route::get('symptoms/stats',      [SymptomController::class, 'stats']);
+    Route::delete('symptoms/clear',   [SymptomController::class, 'clearAll']);
+    Route::get('symptoms',            [SymptomController::class, 'index']);
+    Route::post('symptoms',           [SymptomController::class, 'store']);
+    Route::get('symptoms/{id}',       [SymptomController::class, 'show']);
+    Route::put('symptoms/{id}',       [SymptomController::class, 'update']);
+    Route::delete('symptoms/{id}',    [SymptomController::class, 'destroy']);
 
     // Medications
+    Route::delete('medications/clear',         [MedicationController::class, 'clearAll']);
     Route::get('medications/log',              [MedicationController::class, 'log']);
     Route::get('medications',                  [MedicationController::class, 'index']);
     Route::post('medications',                 [MedicationController::class, 'store']);

@@ -13,16 +13,28 @@ class SymptomController extends Controller
     {
         $query = $request->user()->patient->symptoms()->orderByDesc('logged_at');
 
-        if ($request->period === 'week') {
+        // Date range — period takes priority, then specific date
+        $period = $request->input('period');
+        $date   = $request->input('date');
+
+        if ($period === 'today') {
+            $query->whereDate('logged_at', now()->toDateString());
+        } elseif ($period === 'week') {
             $query->where('logged_at', '>=', now()->startOfWeek());
-        } elseif ($request->period === 'month') {
+        } elseif ($period === 'month') {
             $query->where('logged_at', '>=', now()->startOfMonth());
+        } elseif ($date) {
+            $query->whereDate('logged_at', $date);
         }
 
-        if ($request->type === 'pain') {
-            $query->where('severity', '>=', 1);
-        } elseif ($request->type === 'crisis') {
-            $query->where('severity', '>=', 8);
+        // Severity label filter
+        if ($request->filled('severity')) {
+            $query->where('severity_label', $request->input('severity'));
+        }
+
+        // Mood filter
+        if ($request->filled('mood')) {
+            $query->where('mood', $request->input('mood'));
         }
 
         return ApiResponse::paginated($query->paginate(20));
@@ -98,9 +110,24 @@ class SymptomController extends Controller
         return ApiResponse::success(null, 'Symptom entry deleted.');
     }
 
+    public function clearAll(Request $request): JsonResponse
+    {
+        $request->user()->patient->symptoms()->delete();
+        return ApiResponse::success(null, 'All symptom entries cleared.');
+    }
+
     public function stats(Request $request): JsonResponse
     {
         $patient = $request->user()->patient;
+        $range   = $request->input('range', '7d');
+
+        $days = match ($range) {
+            '30d'   => 30,
+            '90d'   => 90,
+            default => 7,
+        };
+
+        $since = now()->subDays($days - 1)->startOfDay();
 
         $total      = $patient->symptoms()->count();
         $daysLogged = $patient->symptoms()
@@ -108,19 +135,25 @@ class SymptomController extends Controller
             ->value('days') ?? 0;
         $avgSeverity = round((float) ($patient->symptoms()->avg('severity') ?? 0), 1);
 
-        // Risk chart: avg severity per day for last 7 days
-        $riskChart = $patient->symptoms()
-            ->where('logged_at', '>=', now()->subDays(6)->startOfDay())
-            ->selectRaw('CAST(logged_at AS DATE) as day, AVG(CAST(severity AS FLOAT)) as avg_severity, COUNT(*) as count')
+        // Per-day chart data for the selected range
+        $chart = $patient->symptoms()
+            ->where('logged_at', '>=', $since)
+            ->selectRaw('CAST(logged_at AS DATE) as date, COUNT(*) as count, AVG(CAST(severity AS FLOAT)) as avg_severity')
             ->groupByRaw('CAST(logged_at AS DATE)')
             ->orderByRaw('CAST(logged_at AS DATE)')
-            ->get();
+            ->get()
+            ->map(fn($row) => [
+                'date'         => $row->date,
+                'count'        => (int) $row->count,
+                'avg_severity' => round((float) $row->avg_severity, 1),
+            ]);
 
         return ApiResponse::success([
             'total_symptoms' => $total,
             'days_logged'    => (int) $daysLogged,
             'avg_severity'   => $avgSeverity,
-            'risk_chart'     => $riskChart,
+            'range'          => $range,
+            'chart'          => $chart,
         ]);
     }
 }
