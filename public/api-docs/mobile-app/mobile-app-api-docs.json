@@ -165,7 +165,8 @@
         "/api/v1/patient/auth/social": {
             "post": {
                 "tags": ["Patient Auth"],
-                "summary": "Sign in with Google / Apple / Facebook",
+                "summary": "Sign in with Google (Firebase) / Apple / Facebook",
+                "description": "**For mobile apps using Firebase Auth SDK (Google Sign-In via Firebase):** set `provider` to `firebase` and pass the Firebase ID token. The backend verifies the token cryptographically — no extra config needed on the client.\n\n**For direct OAuth flows:** use `google`, `apple`, or `facebook` and pass the OAuth access token.",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -173,16 +174,30 @@
                             "schema": {
                                 "required": ["provider", "token"],
                                 "properties": {
-                                    "provider": { "type": "string", "enum": ["google", "apple", "facebook"], "example": "google" },
-                                    "token": { "type": "string", "description": "OAuth access token from the provider SDK" }
+                                    "provider": {
+                                        "type": "string",
+                                        "enum": ["firebase", "google", "apple", "facebook"],
+                                        "example": "firebase",
+                                        "description": "Use `firebase` when signing in via the Firebase Auth SDK (recommended for mobile). Use `google`/`apple`/`facebook` for direct OAuth flows."
+                                    },
+                                    "token": {
+                                        "type": "string",
+                                        "description": "Firebase ID token (when provider=firebase) or OAuth access token (for other providers). Get this from the Firebase Auth SDK after the user completes Google Sign-In."
+                                    },
+                                    "fcm_token": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "description": "Optional — device push notification token. Saves an extra API call if passed here at login time."
+                                    }
                                 }
                             }
                         }
                     }
                 },
                 "responses": {
-                    "200": { "description": "Social login successful", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
-                    "401": { "description": "Invalid social token" }
+                    "200": { "description": "Login successful", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+                    "401": { "description": "Invalid or expired token" },
+                    "422": { "description": "Google account has no email address" }
                 }
             }
         },

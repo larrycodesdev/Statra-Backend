@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
+use App\Services\FirebaseTokenVerifier;
 use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
@@ -87,32 +88,54 @@ class AuthController extends Controller
     public function social(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'provider' => ['required', 'in:google,apple,facebook'],
+            'provider' => ['required', 'in:firebase,google,apple,facebook'],
             'token'    => ['required', 'string'],
         ]);
 
-        try {
-            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
-            $driver     = Socialite::driver($data['provider']);
-            $socialUser = $driver->stateless()->userFromToken($data['token']);
-        } catch (\Throwable) {
-            return ApiResponse::error('Invalid social token.', 401);
+        // Firebase ID token path — used when mobile app signs in via Firebase Auth SDK
+        if ($data['provider'] === 'firebase') {
+            try {
+                $payload = (new FirebaseTokenVerifier())->verify($data['token']);
+            } catch (\Throwable) {
+                return ApiResponse::error('Invalid Firebase token.', 401);
+            }
+
+            $email = $payload['email'] ?? null;
+            if (!$email) {
+                return ApiResponse::error('This Google account has no email address.', 422);
+            }
+
+            $nameParts = explode(' ', $payload['name'] ?? '', 2);
+            $firstName = $nameParts[0] ?? '';
+            $lastName  = $nameParts[1] ?? '';
+            $avatar    = $payload['picture'] ?? null;
+        } else {
+            // Socialite path — direct OAuth flow (access token)
+            try {
+                /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+                $socialUser = Socialite::driver($data['provider'])->stateless()->userFromToken($data['token']);
+            } catch (\Throwable) {
+                return ApiResponse::error('Invalid social token.', 401);
+            }
+
+            $email     = $socialUser->getEmail();
+            $nameParts = explode(' ', $socialUser->getName() ?? '', 2);
+            $firstName = $nameParts[0] ?? '';
+            $lastName  = $nameParts[1] ?? '';
+            $avatar    = $socialUser->getAvatar();
         }
 
-        $nameParts = explode(' ', $socialUser->getName() ?? '', 2);
-        $firstName = $nameParts[0] ?? '';
-        $lastName  = $nameParts[1] ?? '';
-
         $user = User::firstOrCreate(
-            ['email' => $socialUser->getEmail()],
+            ['email' => $email],
             [
                 'first_name'        => $firstName,
                 'last_name'         => $lastName,
-                'name'              => $socialUser->getName() ?? $socialUser->getEmail(),
+                'name'              => trim("$firstName $lastName") ?: $email,
                 'username'          => $this->generateUsername($firstName),
                 'role'              => 'patient',
                 'email_verified_at' => now(),
                 'password'          => null,
+                'avatar'            => $avatar,
             ]
         );
 
@@ -125,12 +148,16 @@ class AuthController extends Controller
             PatientSettings::create(['patient_id' => $patient->id]);
         }
 
+        if ($request->filled('fcm_token')) {
+            $user->update(['fcm_token' => $request->fcm_token]);
+        }
+
         $token = $user->createToken('mobile-app', ['patient'])->plainTextToken;
 
         return ApiResponse::success([
             'token' => $token,
             'user'  => $this->userResource($user),
-        ], 'Social login successful.');
+        ], 'Login successful.');
     }
 
     // Step 1: Send OTP to email
