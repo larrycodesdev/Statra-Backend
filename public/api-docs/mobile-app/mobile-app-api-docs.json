@@ -757,13 +757,53 @@
         "/api/v1/patient/vitals": {
             "get": {
                 "tags": ["Patient Vitals"],
-                "summary": "Get vitals history with optional filters",
+                "summary": "Get vitals history (paginated)",
+                "description": "Returns paginated vital readings for the authenticated patient. Use `page` to navigate and `per_page` to control how many records come back per request (max 200, default 50). Use `type` to filter by reading type and `range` to control the time window.",
                 "security": [{ "bearerAuth": [] }],
                 "parameters": [
-                    { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv", "calories", "stress"] } },
-                    { "name": "range", "in": "query", "schema": { "type": "string", "enum": ["7d", "30d", "90d"], "default": "7d" } }
+                    { "name": "type", "in": "query", "description": "Filter by vital type. Omit to get all types.", "schema": { "type": "string", "enum": ["heart_rate", "spo2", "temperature", "blood_pressure", "steps", "sleep_state", "hrv", "calories", "stress"] } },
+                    { "name": "range", "in": "query", "description": "Time window. Defaults to last 24 hours.", "schema": { "type": "string", "enum": ["1h", "6h", "24h", "7d", "30d"], "default": "24h" } },
+                    { "name": "page", "in": "query", "description": "Page number. Starts at 1.", "schema": { "type": "integer", "default": 1, "example": 1 } },
+                    { "name": "per_page", "in": "query", "description": "Records per page. Max 200, default 50.", "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 200, "example": 50 } }
                 ],
-                "responses": { "200": { "description": "Vitals list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedResponse" } } } } }
+                "responses": {
+                    "200": {
+                        "description": "Paginated vitals list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean", "example": true },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id":          { "type": "integer", "example": 101 },
+                                                    "type":        { "type": "string",  "example": "heart_rate" },
+                                                    "value":       { "example": 82 },
+                                                    "unit":        { "type": "string",  "example": "bpm" },
+                                                    "recorded_at": { "type": "string",  "format": "date-time", "example": "2026-06-27T08:30:00Z" }
+                                                }
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "description": "Pagination info — use current_page + last_page to know when you've reached the end",
+                                            "properties": {
+                                                "current_page": { "type": "integer", "example": 1, "description": "The page you are currently on" },
+                                                "last_page":    { "type": "integer", "example": 4, "description": "Total number of pages — stop paginating when current_page === last_page" },
+                                                "per_page":     { "type": "integer", "example": 50, "description": "Records returned per page" },
+                                                "total":        { "type": "integer", "example": 182, "description": "Total records across all pages" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/v1/patient/alerts": {

@@ -49,8 +49,9 @@ class VitalsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $request->validate([
-            'type'  => ['nullable', 'in:heart_rate,spo2,temperature,blood_pressure,steps,sleep_state,hrv,calories,stress'],
-            'range' => ['nullable', 'in:1h,6h,24h,7d,30d'],
+            'type'     => ['nullable', 'in:heart_rate,spo2,temperature,blood_pressure,steps,sleep_state,hrv,calories,stress'],
+            'range'    => ['nullable', 'in:1h,6h,24h,7d,30d'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
         $patient = $request->user()->patient;
@@ -71,8 +72,9 @@ class VitalsController extends Controller
 
         $query->where('recorded_at', '>=', $from);
 
+        $perPage  = min((int) $request->input('per_page', 50), 200);
         $readings = $query->select('id', 'type', 'value', 'unit', 'recorded_at')
-            ->paginate(100);
+            ->paginate($perPage);
 
         return ApiResponse::paginated($readings);
     }
