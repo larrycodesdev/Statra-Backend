@@ -21,11 +21,39 @@ class HealthTrackerController extends Controller
             ->limit($limit)
             ->get(['id', 'type', 'value', 'unit', 'recorded_at']);
 
-        // Latest medication logs — includes name and status regardless of date
-        $medicationLogs = $patient->medicationLogs()
-            ->orderByDesc('scheduled_at')
+        // Medication plans with today's status — populated as soon as patient adds a medication
+        $today      = now()->toDateString();
+        $todayLogs  = $patient->medicationLogs()
+            ->whereDate('scheduled_at', $today)
+            ->get()
+            ->groupBy('medication_id');
+
+        $medicationLogs = $patient->medications()
+            ->orderByDesc('created_at')
             ->limit($limit)
-            ->get(['id', 'medication_id', 'medication_name', 'dosage', 'status', 'scheduled_at', 'taken_at']);
+            ->get(['id', 'name', 'dosage', 'frequency', 'reminder_times', 'active'])
+            ->map(function ($med) use ($todayLogs) {
+                $expectedDoses = count($med->reminder_times ?? ['08:00']);
+                $logs          = $todayLogs->get($med->id, collect());
+                $takenCount    = $logs->where('status', 'taken')->count();
+                $missedCount   = $logs->where('status', 'missed')->count();
+
+                $todayStatus = match (true) {
+                    ($takenCount + $missedCount) === 0 => 'pending',
+                    $takenCount === $expectedDoses     => 'taken',
+                    $missedCount === $expectedDoses    => 'missed',
+                    default                            => 'partial',
+                };
+
+                return [
+                    'id'           => $med->id,
+                    'name'         => $med->name,
+                    'dosage'       => $med->dosage,
+                    'frequency'    => $med->frequency,
+                    'today_status' => $todayStatus,
+                    'active'       => (bool) $med->active,
+                ];
+            });
 
         // Latest symptom entries — newest first regardless of date
         $symptoms = $patient->symptoms()

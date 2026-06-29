@@ -729,17 +729,16 @@
                                                 },
                                                 "medication_logs": {
                                                     "type": "array",
-                                                    "description": "Latest 10 medication log entries, newest scheduled_at first",
+                                                    "description": "Latest 10 medication plans (most recently added first) with today's status. Populated as soon as a medication is added — no need to mark taken/missed first.",
                                                     "items": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "id":              { "type": "integer", "example": 55 },
-                                                            "medication_id":   { "type": "integer", "nullable": true, "example": 3 },
-                                                            "medication_name": { "type": "string",  "example": "Hydroxyurea" },
-                                                            "dosage":          { "type": "string",  "nullable": true, "example": "500mg" },
-                                                            "status":          { "type": "string",  "enum": ["taken", "missed"], "example": "taken" },
-                                                            "scheduled_at":    { "type": "string",  "format": "date-time", "example": "2026-06-27T08:00:00Z" },
-                                                            "taken_at":        { "type": "string",  "format": "date-time", "nullable": true, "example": "2026-06-27T08:07:00Z" }
+                                                            "id":           { "type": "integer", "example": 3 },
+                                                            "name":         { "type": "string",  "example": "Hydroxyurea" },
+                                                            "dosage":       { "type": "string",  "nullable": true, "example": "500mg" },
+                                                            "frequency":    { "type": "string",  "nullable": true, "example": "Once daily" },
+                                                            "today_status": { "type": "string",  "enum": ["pending", "taken", "missed", "partial"], "example": "pending" },
+                                                            "active":       { "type": "boolean", "example": true }
                                                         }
                                                     }
                                                 },
