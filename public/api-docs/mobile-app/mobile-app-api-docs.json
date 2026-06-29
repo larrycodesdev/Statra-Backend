@@ -92,6 +92,7 @@
         { "name": "Patient Auth", "description": "Register, login (email or username), OTP password reset" },
         { "name": "Patient Profile", "description": "Personal info, medical info, emergency contacts, FCM token" },
         { "name": "Patient Device", "description": "Wearable device registration and sync status" },
+        { "name": "Patient Health Tracker", "description": "Single aggregated endpoint for the Health Tracker screen — latest heart rate, medication logs, and symptoms in one call" },
         { "name": "Patient Vitals", "description": "Vitals sync from JCVital 2208A band and history queries" },
         { "name": "Patient Alerts", "description": "Alerts triggered by the server-side alert engine" },
         { "name": "Patient Notifications", "description": "In-app notifications — list, mark read/unread" },
@@ -683,6 +684,79 @@
                                                     "platform":         { "type": "string", "example": "android" },
                                                     "last_synced_at":   { "type": "string", "format": "date-time", "nullable": true },
                                                     "is_active":        { "type": "boolean", "example": true }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/health-tracker": {
+            "get": {
+                "tags": ["Patient Health Tracker"],
+                "summary": "Health Tracker screen — all data in one call",
+                "description": "Returns the latest heart rate readings, medication logs, and symptom entries for the authenticated patient. **No date filtering is applied** — always returns the most recent records available, regardless of how old they are. Use this to populate the Health Tracker screen instead of making 3 separate calls.",
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": {
+                        "description": "Latest health data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean", "example": true },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "heart_rate": {
+                                                    "type": "array",
+                                                    "description": "Latest 10 heart rate readings from the band, newest first",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id":          { "type": "integer", "example": 204 },
+                                                            "type":        { "type": "string",  "example": "heart_rate" },
+                                                            "value":       { "type": "integer", "example": 82 },
+                                                            "unit":        { "type": "string",  "example": "bpm" },
+                                                            "recorded_at": { "type": "string",  "format": "date-time", "example": "2026-06-27T08:30:00Z" }
+                                                        }
+                                                    }
+                                                },
+                                                "medication_logs": {
+                                                    "type": "array",
+                                                    "description": "Latest 10 medication log entries, newest scheduled_at first",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id":              { "type": "integer", "example": 55 },
+                                                            "medication_id":   { "type": "integer", "nullable": true, "example": 3 },
+                                                            "medication_name": { "type": "string",  "example": "Hydroxyurea" },
+                                                            "dosage":          { "type": "string",  "nullable": true, "example": "500mg" },
+                                                            "status":          { "type": "string",  "enum": ["taken", "missed"], "example": "taken" },
+                                                            "scheduled_at":    { "type": "string",  "format": "date-time", "example": "2026-06-27T08:00:00Z" },
+                                                            "taken_at":        { "type": "string",  "format": "date-time", "nullable": true, "example": "2026-06-27T08:07:00Z" }
+                                                        }
+                                                    }
+                                                },
+                                                "symptoms": {
+                                                    "type": "array",
+                                                    "description": "Latest 10 symptom entries, newest logged_at first",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id":             { "type": "integer", "example": 31 },
+                                                            "symptom":        { "type": "string",  "example": "Joint pain" },
+                                                            "severity":       { "type": "integer", "example": 7 },
+                                                            "severity_label": { "type": "string",  "enum": ["none", "mild", "moderate", "severe"], "nullable": true, "example": "severe" },
+                                                            "mood":           { "type": "string",  "enum": ["low", "okay", "alright", "good"], "nullable": true, "example": "okay" },
+                                                            "logged_at":      { "type": "string",  "format": "date-time", "example": "2026-06-26T14:20:00Z" }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }

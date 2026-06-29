@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Patient\AlertController;
+use App\Http\Controllers\Patient\HealthTrackerController;
 use App\Http\Controllers\Patient\AppointmentController;
 use App\Http\Controllers\Patient\AuthController;
 use App\Http\Controllers\Patient\DeviceController;
@@ -81,6 +82,9 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
 
     // Triggers
     Route::get('triggers', [TriggerController::class, 'index']);
+
+    // Health Tracker (aggregated dashboard endpoint)
+    Route::get('health-tracker', [HealthTrackerController::class, 'index']);
 
     // Trends & Insights
     Route::get('trends', [TrendsController::class, 'index']);
