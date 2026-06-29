@@ -60,30 +60,32 @@ class SymptomController extends Controller
             'logged_at'        => ['nullable', 'date'],
         ]);
 
-        $symptom = $request->user()->patient->symptoms()->create([
+        $patient = $request->user()->patient;
+        $symptom = $patient->symptoms()->create([
             ...$data,
             'logged_at' => $data['logged_at'] ?? now(),
         ]);
 
-        return ApiResponse::created($symptom, 'Symptom logged successfully.');
+        return ApiResponse::created($this->withInsight($patient, $symptom), 'Symptom logged successfully.');
     }
 
     public function show(Request $request, int $id): JsonResponse
     {
         $patient = $request->user()->patient;
         $symptom = $patient->symptoms()->findOrFail($id);
+        return ApiResponse::success($this->withInsight($patient, $symptom));
+    }
 
-        // All entries with the same symptom name in the last 7 days (includes current)
+    private function withInsight(\App\Models\Patient $patient, \App\Models\Symptom $symptom): array
+    {
         $similar = $patient->symptoms()
             ->where('symptom', $symptom->symptom)
             ->where('logged_at', '>=', now()->subDays(6)->startOfDay())
             ->get(['id', 'triggers']);
 
-        $insight = $this->buildInsight($symptom->symptom, $similar);
-
-        return ApiResponse::success(array_merge($symptom->toArray(), [
-            'pattern_insights' => $insight,
-        ]));
+        return array_merge($symptom->toArray(), [
+            'pattern_insights' => $this->buildInsight($symptom->symptom, $similar),
+        ]);
     }
 
     private function buildInsight(string $symptomName, $similar): string
@@ -151,8 +153,9 @@ class SymptomController extends Controller
         ]);
 
         $symptom->update(array_merge($data, ['edit_count' => 1]));
+        $symptom->refresh(); // refresh in-place — avoids Azure SQL stale read from new connection
 
-        return ApiResponse::success($symptom->fresh(), 'Symptom updated.');
+        return ApiResponse::success($this->withInsight($request->user()->patient, $symptom), 'Symptom updated.');
     }
 
     public function destroy(Request $request, int $id): JsonResponse
