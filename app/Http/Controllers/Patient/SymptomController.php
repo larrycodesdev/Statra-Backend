@@ -116,6 +116,76 @@ class SymptomController extends Controller
         return ApiResponse::success(null, 'All symptom entries cleared.');
     }
 
+    // GET /symptoms/summary — chart + paginated history in one call, all filters shared
+    public function summary(Request $request): JsonResponse
+    {
+        $patient  = $request->user()->patient;
+        $range    = $request->input('range', '7d');
+        $severity = $request->input('severity');
+        $mood     = $request->input('mood');
+        $perPage  = min((int) $request->input('per_page', 20), 100);
+
+        $since = match ($range) {
+            '30d'   => now()->subDays(29)->startOfDay(),
+            '90d'   => now()->subDays(89)->startOfDay(),
+            default => now()->subDays(6)->startOfDay(),
+        };
+
+        // Shared filter closure — applied identically to chart, history, and summary
+        $applyFilters = function ($query) use ($since, $severity, $mood) {
+            $query->where('logged_at', '>=', $since);
+            if ($severity) {
+                $query->where('severity_label', $severity);
+            }
+            if ($mood) {
+                $query->where('mood', $mood);
+            }
+        };
+
+        // Summary stats within the filtered window
+        $baseQuery   = $patient->symptoms()->tap($applyFilters);
+        $total       = (clone $baseQuery)->count();
+        $avgSeverity = round((float) ((clone $baseQuery)->avg('severity') ?? 0), 1);
+
+        // Per-day chart breakdown
+        $chart = $patient->symptoms()
+            ->tap($applyFilters)
+            ->selectRaw('CAST(logged_at AS DATE) as date, COUNT(*) as count, AVG(CAST(severity AS FLOAT)) as avg_severity')
+            ->groupByRaw('CAST(logged_at AS DATE)')
+            ->orderByRaw('CAST(logged_at AS DATE)')
+            ->get()
+            ->map(fn($row) => [
+                'date'         => $row->date,
+                'count'        => (int) $row->count,
+                'avg_severity' => round((float) $row->avg_severity, 1),
+            ]);
+
+        // Paginated history — newest first
+        $paginator = $patient->symptoms()
+            ->tap($applyFilters)
+            ->orderByDesc('logged_at')
+            ->select(['id', 'symptom', 'severity', 'severity_label', 'body_locations', 'pain_areas', 'mood', 'notes', 'logged_at'])
+            ->paginate($perPage);
+
+        return ApiResponse::success([
+            'summary' => [
+                'total_in_range' => $total,
+                'avg_severity'   => $avgSeverity,
+                'range'          => $range,
+            ],
+            'chart'   => $chart,
+            'history' => [
+                'data' => $paginator->items(),
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page'    => $paginator->lastPage(),
+                    'per_page'     => $paginator->perPage(),
+                    'total'        => $paginator->total(),
+                ],
+            ],
+        ]);
+    }
+
     public function stats(Request $request): JsonResponse
     {
         $patient = $request->user()->patient;

@@ -61,6 +61,7 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     Route::patch('notifications/{id}/read',       [NotificationController::class, 'markRead']);
 
     // Symptoms
+    Route::get('symptoms/summary',    [SymptomController::class, 'summary']);
     Route::get('symptoms/stats',      [SymptomController::class, 'stats']);
     Route::delete('symptoms/clear',   [SymptomController::class, 'clearAll']);
     Route::get('symptoms',            [SymptomController::class, 'index']);
