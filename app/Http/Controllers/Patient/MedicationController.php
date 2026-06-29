@@ -87,7 +87,9 @@ class MedicationController extends Controller
 
         $medication->update($data);
 
-        return ApiResponse::success($medication->fresh(), 'Medication updated.');
+        $medication->refresh();
+
+        return ApiResponse::success($medication, 'Medication updated.');
     }
 
     public function destroy(Request $request, int $id): JsonResponse

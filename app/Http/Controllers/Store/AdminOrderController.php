@@ -60,11 +60,12 @@ class AdminOrderController extends Controller
         }
 
         $order->update($updates);
+        $order->refresh();
 
         return response()->json([
             'success' => true,
             'message' => "Order {$orderNumber} updated to '{$request->status}'.",
-            'data'    => $order->fresh(),
+            'data'    => $order,
         ]);
     }
 }

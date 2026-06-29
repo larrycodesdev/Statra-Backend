@@ -32,8 +32,9 @@ class SettingsController extends Controller
         $settings = $patient->settings ?? $patient->settings()->create([]);
 
         $settings->update($data);
+        $settings->refresh();
 
-        return ApiResponse::success($this->settingsResource($settings->fresh()), 'Settings updated.');
+        return ApiResponse::success($this->settingsResource($settings), 'Settings updated.');
     }
 
     private function settingsResource(\App\Models\PatientSettings $settings): array
