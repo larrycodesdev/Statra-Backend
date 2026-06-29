@@ -70,8 +70,59 @@ class SymptomController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $symptom = $request->user()->patient->symptoms()->findOrFail($id);
-        return ApiResponse::success($symptom);
+        $patient = $request->user()->patient;
+        $symptom = $patient->symptoms()->findOrFail($id);
+
+        // All entries with the same symptom name in the last 7 days (includes current)
+        $similar = $patient->symptoms()
+            ->where('symptom', $symptom->symptom)
+            ->where('logged_at', '>=', now()->subDays(6)->startOfDay())
+            ->get(['id', 'triggers']);
+
+        $insight = $this->buildInsight($symptom->symptom, $similar);
+
+        return ApiResponse::success(array_merge($symptom->toArray(), [
+            'pattern_insights' => $insight,
+        ]));
+    }
+
+    private function buildInsight(string $symptomName, $similar): string
+    {
+        $count = $similar->count();
+
+        if ($count <= 1) {
+            return "This is the first time {$symptomName} was logged in the last 7 days.";
+        }
+
+        $parts = ["{$symptomName} appeared {$count}x this week."];
+
+        // Flatten and tally all triggers across the similar entries
+        $triggerTally = [];
+        foreach ($similar as $entry) {
+            foreach ($entry->triggers ?? [] as $trigger) {
+                $trigger = trim($trigger);
+                if ($trigger !== '') {
+                    $triggerTally[$trigger] = ($triggerTally[$trigger] ?? 0) + 1;
+                }
+            }
+        }
+
+        if (!empty($triggerTally)) {
+            arsort($triggerTally);
+            $topTrigger = array_key_first($triggerTally);
+            $topCount   = $triggerTally[$topTrigger];
+
+            if ($topCount >= 2) {
+                $parts[] = "{$topTrigger} was a trigger in {$topCount} of those entries.";
+            } elseif (count($triggerTally) >= 2) {
+                $top2    = array_slice(array_keys($triggerTally), 0, 2);
+                $parts[] = 'Common triggers include ' . implode(' and ', $top2) . '.';
+            } else {
+                $parts[] = "{$topTrigger} was noted as a trigger.";
+            }
+        }
+
+        return implode(' ', $parts);
     }
 
     public function update(Request $request, int $id): JsonResponse

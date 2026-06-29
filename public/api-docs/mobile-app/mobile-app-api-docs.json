@@ -1246,14 +1246,15 @@
         "/api/v1/patient/symptoms/{id}": {
             "get": {
                 "tags": ["Patient Symptoms"],
-                "summary": "Get a single symptom record",
+                "summary": "Get a single symptom record + pattern insights",
+                "description": "Returns full symptom detail plus a `pattern_insights` string — an auto-generated sentence describing how often the same symptom appeared this week and which triggers were most common. Use this to populate the Entry Details screen.",
                 "security": [{ "bearerAuth": [] }],
                 "parameters": [
                     { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Symptom detail",
+                        "description": "Symptom detail with pattern insights",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1263,20 +1264,21 @@
                                         "data": {
                                             "type": "object",
                                             "properties": {
-                                                "id":              { "type": "integer", "example": 1 },
-                                                "symptom":         { "type": "string", "example": "Severe joint pain" },
-                                                "severity":        { "type": "integer", "example": 7 },
-                                                "severity_label":  { "type": "string", "example": "severe", "nullable": true },
-                                                "body_locations":  { "type": "array", "items": { "type": "string" } },
-                                                "pain_areas":      { "type": "array", "items": { "type": "string" }, "nullable": true },
-                                                "pain_level":      { "type": "integer", "nullable": true },
-                                                "duration":        { "type": "string", "nullable": true },
-                                                "triggers":        { "type": "array", "items": { "type": "string" } },
-                                                "on_medication":   { "type": "boolean" },
-                                                "notes":           { "type": "string", "nullable": true },
-                                                "mood":            { "type": "string", "nullable": true },
-                                                "edit_count":      { "type": "integer", "example": 0 },
-                                                "logged_at":       { "type": "string", "format": "date-time" }
+                                                "id":               { "type": "integer", "example": 1 },
+                                                "symptom":          { "type": "string",  "example": "Chest Pain" },
+                                                "severity":         { "type": "integer", "example": 5 },
+                                                "severity_label":   { "type": "string",  "example": "moderate", "nullable": true },
+                                                "body_locations":   { "type": "array",   "items": { "type": "string" }, "example": ["Chest"] },
+                                                "pain_areas":       { "type": "array",   "items": { "type": "string" }, "nullable": true },
+                                                "pain_level":       { "type": "integer", "nullable": true },
+                                                "duration":         { "type": "string",  "nullable": true, "example": "1-2hours" },
+                                                "triggers":         { "type": "array",   "items": { "type": "string" }, "example": ["Cold Weather", "Dehydration"] },
+                                                "on_medication":    { "type": "boolean", "example": true },
+                                                "notes":            { "type": "string",  "nullable": true },
+                                                "mood":             { "type": "string",  "nullable": true, "example": "alright" },
+                                                "edit_count":       { "type": "integer", "example": 0 },
+                                                "logged_at":        { "type": "string",  "format": "date-time" },
+                                                "pattern_insights": { "type": "string",  "example": "Chest Pain appeared 3x this week. Cold Weather was a trigger in 2 of those entries.", "description": "Auto-generated insight based on the last 7 days of entries with the same symptom name. Always present — never null." }
                                             }
                                         }
                                     }
