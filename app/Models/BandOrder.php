@@ -9,22 +9,27 @@ class BandOrder extends Model
     protected $fillable = [
         'order_number',
         'first_name', 'last_name', 'email', 'phone',
-        'street_address', 'city', 'state',
+        'street_address', 'city', 'state', 'country',
         'band_size', 'quantity', 'plan',
         'unit_price', 'subtotal', 'discount', 'shipping', 'total',
-        'status', 'payment_status', 'payment_reference', 'korapay_checkout_url',
+        'status', 'issue', 'delay_note', 'status_history',
+        'payment_status', 'payment_reference', 'korapay_checkout_url',
         'tracking_number', 'courier', 'shipped_at',
+        'rating', 'review_text',
     ];
 
     protected function casts(): array
     {
         return [
-            'unit_price' => 'float',
-            'subtotal'   => 'float',
-            'discount'   => 'float',
-            'shipping'   => 'float',
-            'total'      => 'float',
-            'shipped_at' => 'datetime',
+            'unit_price'     => 'float',
+            'subtotal'       => 'float',
+            'discount'       => 'float',
+            'shipping'       => 'float',
+            'total'          => 'float',
+            'shipped_at'     => 'datetime',
+            'status_history' => 'array',
+            'rating'         => 'integer',
+            'owns_band'      => 'boolean',
         ];
     }
 
