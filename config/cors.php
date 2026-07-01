@@ -20,10 +20,14 @@ return [
 
     'allowed_origins' => [
         env('FRONTEND_URL', 'http://localhost:3000'),
-        'http://localhost:5173',   // Vite dev server (check-in web app)
-        'http://localhost:4173',   // Vite preview
+        'http://localhost:5173',
+        'http://localhost:4173',
         'https://statra.health',
         'https://www.statra.health',
+        'https://statrahealth.com',
+        'https://www.statrahealth.com',
+        'https://admin.statrahealth.com',
+        'https://statra-website.vercel.app',
     ],
 
     'allowed_origins_patterns' => [],
