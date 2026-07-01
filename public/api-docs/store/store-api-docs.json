@@ -2,8 +2,8 @@
     "openapi": "3.0.0",
     "info": {
         "title": "STATRA — Band Store API",
-        "version": "1.0.0",
-        "description": "API for the STATRA Band ordering website.\n\nHandles product info, order placement via **Korapay**, customer order tracking, and admin order management.\n\nAdmin endpoints require a static Bearer token (`STORE_ADMIN_TOKEN`).",
+        "version": "2.0.0",
+        "description": "API for the STATRA Band ordering website and admin panel.\n\nHandles product info, order placement via **Korapay**, customer order tracking, product reviews, affiliate signups, and full admin order management.\n\nAdmin endpoints require a Bearer token obtained from `POST /admin/auth/login`.",
         "contact": {
             "email": "api@scdwellness.app"
         }
@@ -19,7 +19,7 @@
             "adminToken": {
                 "type": "http",
                 "scheme": "bearer",
-                "description": "Static STORE_ADMIN_TOKEN from server .env"
+                "description": "Token returned by POST /admin/auth/login"
             }
         },
         "schemas": {
@@ -34,32 +34,19 @@
                     "street_address": { "type": "string",  "nullable": true, "example": "12 Marina Road" },
                     "city":           { "type": "string",  "nullable": true, "example": "Lagos" },
                     "state":          { "type": "string",  "nullable": true, "example": "Lagos" },
+                    "country":        { "type": "string",  "nullable": true, "example": "Nigeria" },
                     "band_size":      { "type": "string",  "enum": ["S", "M", "L"], "example": "M" },
                     "quantity":       { "type": "integer", "minimum": 1, "maximum": 10, "example": 1 },
                     "plan":           { "type": "string",  "enum": ["band_only", "band_care_plan"], "example": "band_care_plan" }
                 }
             },
-            "OrderTrackingResponse": {
+            "TimelineEntry": {
                 "type": "object",
                 "properties": {
-                    "order_number":   { "type": "string",  "example": "STR-2026-00001" },
-                    "status":         { "type": "string",  "enum": ["pending", "paid", "processing", "shipped", "delivered", "cancelled"], "example": "shipped" },
-                    "payment_status": { "type": "string",  "enum": ["pending", "paid", "failed"], "example": "paid" },
-                    "band_size":      { "type": "string",  "example": "M" },
-                    "quantity":       { "type": "integer", "example": 1 },
-                    "plan":           { "type": "string",  "example": "Band + Care Plan" },
-                    "total":          { "type": "number",  "example": 149.00 },
-                    "currency":       { "type": "string",  "example": "USD" },
-                    "shipping": {
-                        "type": "object",
-                        "properties": {
-                            "tracking_number": { "type": "string",  "nullable": true, "example": "1Z999AA10123456784" },
-                            "courier":         { "type": "string",  "nullable": true, "example": "DHL" },
-                            "shipped_at":      { "type": "string",  "format": "date-time", "nullable": true },
-                            "estimated_days":  { "type": "string",  "example": "5–8 business days" }
-                        }
-                    },
-                    "placed_at": { "type": "string", "format": "date-time" }
+                    "status": { "type": "string", "example": "shipped" },
+                    "label":  { "type": "string", "example": "Shipped" },
+                    "date":   { "type": "string", "format": "date-time" },
+                    "note":   { "type": "string", "nullable": true, "example": "Weather conditions causing delays" }
                 }
             },
             "AdminOrder": {
@@ -74,6 +61,7 @@
                     "street_address":       { "type": "string",  "nullable": true },
                     "city":                 { "type": "string",  "nullable": true },
                     "state":                { "type": "string",  "nullable": true },
+                    "country":              { "type": "string",  "nullable": true },
                     "band_size":            { "type": "string",  "example": "M" },
                     "quantity":             { "type": "integer", "example": 1 },
                     "plan":                 { "type": "string",  "example": "band_care_plan" },
@@ -82,78 +70,37 @@
                     "discount":             { "type": "number",  "example": 50.00 },
                     "shipping":             { "type": "number",  "example": 0 },
                     "total":                { "type": "number",  "example": 149.00 },
-                    "status":               { "type": "string",  "enum": ["pending", "paid", "processing", "shipped", "delivered", "cancelled"] },
+                    "status":               { "type": "string",  "enum": ["pending","paid","processing","packed","dispatched","in_transit","shipped","delivered","cancelled","delayed"] },
+                    "issue":                { "type": "string",  "nullable": true, "enum": ["damaged", "lost"], "description": "Problem flag separate from status" },
+                    "delay_note":           { "type": "string",  "nullable": true, "example": "Weather conditions causing delays" },
+                    "status_history":       { "type": "array",   "items": { "$ref": "#/components/schemas/TimelineEntry" } },
                     "payment_status":       { "type": "string",  "enum": ["pending", "paid", "failed"] },
                     "payment_reference":    { "type": "string",  "nullable": true },
-                    "korapay_checkout_url": { "type": "string",  "nullable": true },
                     "tracking_number":      { "type": "string",  "nullable": true },
                     "courier":              { "type": "string",  "nullable": true },
                     "shipped_at":           { "type": "string",  "format": "date-time", "nullable": true },
+                    "rating":               { "type": "integer", "nullable": true, "minimum": 1, "maximum": 5 },
+                    "review_text":          { "type": "string",  "nullable": true },
                     "created_at":           { "type": "string",  "format": "date-time" }
                 }
             }
         }
     },
     "tags": [
-        { "name": "Product", "description": "Product info" },
-        { "name": "Orders",  "description": "Place and track orders" },
-        { "name": "Payment", "description": "Korapay webhook" },
-        { "name": "Admin",   "description": "Admin order management — requires Bearer token (STORE_ADMIN_TOKEN)" }
+        { "name": "Product",    "description": "Product info" },
+        { "name": "Orders",     "description": "Place, track and review orders" },
+        { "name": "Affiliates", "description": "Affiliate program signup" },
+        { "name": "Payment",    "description": "Korapay webhook" },
+        { "name": "Admin Auth", "description": "Admin login / logout / change password" },
+        { "name": "Admin",      "description": "Admin order management — requires Bearer token from /admin/auth/login" }
     ],
     "paths": {
         "/api/v1/store/product": {
             "get": {
                 "tags": ["Product"],
                 "summary": "Get STATRA Band product info",
-                "description": "Returns price, sizes, plans, shipping info, and marketing badges. No auth required.",
                 "responses": {
-                    "200": {
-                        "description": "Product details",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": { "type": "boolean", "example": true },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "name":           { "type": "string",  "example": "STATRA Band" },
-                                                "description":    { "type": "string" },
-                                                "price":          { "type": "number",  "example": 149.00 },
-                                                "original_price": { "type": "number",  "example": 199.00 },
-                                                "currency":       { "type": "string",  "example": "USD" },
-                                                "plans":          { "type": "array",   "items": { "type": "object" } },
-                                                "sizes":          { "type": "array",   "items": { "type": "object" } },
-                                                "shipping":       { "type": "object" },
-                                                "badges":         { "type": "array",   "items": { "type": "string" } }
-                                            }
-                                        }
-                                    }
-                                },
-                                "example": {
-                                    "success": true,
-                                    "data": {
-                                        "name": "STATRA Band",
-                                        "price": 149.00,
-                                        "original_price": 199.00,
-                                        "currency": "USD",
-                                        "plans": [
-                                            { "id": "band_only",      "label": "Band Only",           "price": 149.00, "note": null },
-                                            { "id": "band_care_plan", "label": "Band + Care Plan",    "price": 149.00, "note": "3 months Care Plan included free" }
-                                        ],
-                                        "sizes": [
-                                            { "id": "S", "label": "S · 130–160mm" },
-                                            { "id": "M", "label": "M · 155–185mm" },
-                                            { "id": "L", "label": "L · 181–210mm" }
-                                        ],
-                                        "shipping": { "cost": 0, "label": "Free", "estimated_days": "5–8 business days" },
-                                        "badges": ["Free shipping worldwide", "Clinically validated", "2-year warranty"]
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    "200": { "description": "Product details including price, sizes, plans, shipping info" }
                 }
             }
         },
@@ -161,52 +108,34 @@
             "post": {
                 "tags": ["Orders"],
                 "summary": "Place an order",
-                "description": "Creates the order record, initialises a Korapay checkout session, and returns the `checkout_url` to redirect the customer to for payment.",
+                "description": "Creates the order and returns a Korapay `checkout_url` to redirect the customer to for payment.",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
-                            "schema": { "$ref": "#/components/schemas/PlaceOrderRequest" },
-                            "example": {
-                                "first_name": "Jane",
-                                "last_name":  "Daniel",
-                                "email":      "jane@example.com",
-                                "phone":      "+234 800 0000000",
-                                "street_address": "12 Marina Road",
-                                "city":       "Lagos",
-                                "state":      "Lagos",
-                                "band_size":  "M",
-                                "quantity":   1,
-                                "plan":       "band_care_plan"
-                            }
+                            "schema": { "$ref": "#/components/schemas/PlaceOrderRequest" }
                         }
                     }
                 },
                 "responses": {
                     "201": {
-                        "description": "Order created — redirect customer to checkout_url to complete payment",
+                        "description": "Order created",
                         "content": {
                             "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success":  { "type": "boolean", "example": true },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "order_number": { "type": "string", "example": "STR-2026-00001" },
-                                                "checkout_url": { "type": "string", "example": "https://checkout.korapay.com/pay/..." },
-                                                "total":        { "type": "number", "example": 149.00 },
-                                                "currency":     { "type": "string", "example": "USD" }
-                                            }
-                                        }
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "order_number": "STR-2026-00001",
+                                        "checkout_url": "https://checkout.korapay.com/pay/...",
+                                        "total": 149.00,
+                                        "currency": "USD"
                                     }
                                 }
                             }
                         }
                     },
-                    "422": { "description": "Validation error — missing or invalid fields" },
-                    "502": { "description": "Korapay checkout initialisation failed" }
+                    "422": { "description": "Validation error" },
+                    "502": { "description": "Korapay checkout init failed" }
                 }
             }
         },
@@ -214,25 +143,61 @@
             "get": {
                 "tags": ["Orders"],
                 "summary": "Track an order",
-                "description": "Public endpoint — customers enter their order number on the website to check status and tracking info.",
+                "description": "Public endpoint. Returns full tracking timeline, customer details, items, and pricing.",
                 "parameters": [
-                    {
-                        "name": "orderNumber",
-                        "in": "path",
-                        "required": true,
-                        "schema": { "type": "string", "example": "STR-2026-00001" }
-                    }
+                    { "name": "orderNumber", "in": "path", "required": true, "schema": { "type": "string", "example": "STR-2026-00001" } }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order status and shipping/tracking info",
+                        "description": "Full order tracking data",
                         "content": {
                             "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": { "type": "boolean", "example": true },
-                                        "data":    { "$ref": "#/components/schemas/OrderTrackingResponse" }
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "order_number": "STR-2026-00001",
+                                        "status": "in_transit",
+                                        "issue": null,
+                                        "delay_note": null,
+                                        "is_delayed": false,
+                                        "timeline": [
+                                            { "status": "pending",    "label": "Order placed",  "date": "2026-03-24T10:00:00Z", "note": null },
+                                            { "status": "processing", "label": "Processing",    "date": "2026-04-24T08:00:00Z", "note": null },
+                                            { "status": "shipped",    "label": "Shipped",       "date": "2026-04-24T14:00:00Z", "note": null },
+                                            { "status": "in_transit", "label": "In Transit",    "date": "2026-04-25T09:00:00Z", "note": null }
+                                        ],
+                                        "order_info": {
+                                            "placed_at": "2026-03-24T10:00:00Z",
+                                            "estimated_dropoff": "2026-05-25"
+                                        },
+                                        "customer": {
+                                            "full_name": "Jane Daniel",
+                                            "email": "jane@example.com",
+                                            "phone": "+234 800 0000000"
+                                        },
+                                        "location": {
+                                            "street_address": "12 Marina Road",
+                                            "city": "Lagos",
+                                            "state": "Lagos",
+                                            "country": "Nigeria"
+                                        },
+                                        "delivery": {
+                                            "tracking_number": "TRK123456",
+                                            "courier": "DHL",
+                                            "shipped_at": "2026-04-24T14:00:00Z",
+                                            "delivery_fee": "Free"
+                                        },
+                                        "items": [
+                                            { "name": "Statra Band", "quantity": 1, "price": 149.00, "total": 149.00 }
+                                        ],
+                                        "pricing": {
+                                            "subtotal": 149.00,
+                                            "discount": 50.00,
+                                            "shipping": 0,
+                                            "total": 149.00,
+                                            "currency": "USD"
+                                        },
+                                        "rating": null
                                     }
                                 }
                             }
@@ -242,128 +207,244 @@
                 }
             }
         },
-        "/api/v1/store/payment/webhook": {
+        "/api/v1/store/orders/{orderNumber}/review": {
             "post": {
-                "tags": ["Payment"],
-                "summary": "Korapay payment webhook",
-                "description": "Called automatically by Korapay after a successful payment.\n\nVerifies the `X-Korapay-Signature` header (HMAC-SHA256 of raw payload against `KORAPAY_ENCRYPTION_KEY`), marks the order as paid, and queues an order confirmation email to the customer.\n\n**Do not call this endpoint manually.**",
+                "tags": ["Orders"],
+                "summary": "Submit a product review",
+                "description": "Customers can leave a star rating and optional review text after their order is delivered. Only one review per order is allowed.",
                 "parameters": [
-                    {
-                        "name": "X-Korapay-Signature",
-                        "in": "header",
-                        "required": true,
-                        "description": "HMAC-SHA256 signature of the raw request body",
-                        "schema": { "type": "string" }
-                    }
+                    { "name": "orderNumber", "in": "path", "required": true, "schema": { "type": "string", "example": "STR-2026-00001" } }
                 ],
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object",
+                                "required": ["rating"],
                                 "properties": {
-                                    "event": { "type": "string", "example": "charge.success" },
-                                    "data": {
-                                        "type": "object",
-                                        "properties": {
-                                            "reference":         { "type": "string", "example": "STR-2026-00001" },
-                                            "payment_reference": { "type": "string", "example": "KPY-..." }
-                                        }
-                                    }
+                                    "rating":      { "type": "integer", "minimum": 1, "maximum": 5, "example": 4 },
+                                    "review_text": { "type": "string",  "nullable": true, "example": "Great product, highly recommend!" }
                                 }
                             }
                         }
                     }
                 },
                 "responses": {
+                    "200": { "description": "Review saved" },
+                    "422": { "description": "Order not delivered yet, or already reviewed" },
+                    "404": { "description": "Order not found" }
+                }
+            }
+        },
+        "/api/v1/store/affiliates/join": {
+            "post": {
+                "tags": ["Affiliates"],
+                "summary": "Apply to the affiliate program",
+                "description": "Multi-step signup form. On success, sends a Telegram group invite link to the provided email.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["name", "email", "owns_band"],
+                                "properties": {
+                                    "name":            { "type": "string", "example": "John Doe" },
+                                    "email":           { "type": "string", "format": "email", "example": "john@example.com" },
+                                    "country":         { "type": "string", "nullable": true, "example": "Nigeria" },
+                                    "owns_band":       { "type": "boolean", "example": true },
+                                    "social_platform": { "type": "string", "nullable": true, "enum": ["tiktok","youtube","twitter","instagram","snapchat","facebook","linkedin"] }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Application accepted — Telegram link emailed" },
+                    "422": { "description": "Email already registered" }
+                }
+            }
+        },
+        "/api/v1/store/payment/webhook": {
+            "post": {
+                "tags": ["Payment"],
+                "summary": "Korapay payment webhook",
+                "description": "Called automatically by Korapay after a successful payment. Verifies `X-Korapay-Signature` header, marks order as paid, and emails order confirmation. **Do not call manually.**",
+                "responses": {
                     "200": { "description": "Webhook acknowledged" },
                     "401": { "description": "Invalid signature" }
+                }
+            }
+        },
+        "/api/v1/store/admin/auth/login": {
+            "post": {
+                "tags": ["Admin Auth"],
+                "summary": "Admin login",
+                "description": "Returns a Bearer token to use on all `/admin/*` endpoints.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["email", "password"],
+                                "properties": {
+                                    "email":    { "type": "string", "format": "email", "example": "superadmin@statrahealth.com" },
+                                    "password": { "type": "string", "example": "Statra@admin@token@forever@2026" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "token": "AbCdEfGh...",
+                                        "admin": { "id": 1, "name": "Super Admin", "email": "superadmin@statrahealth.com" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": { "description": "Invalid credentials" }
+                }
+            }
+        },
+        "/api/v1/store/admin/auth/me": {
+            "get": {
+                "tags": ["Admin Auth"],
+                "summary": "Get current admin profile",
+                "security": [{ "adminToken": [] }],
+                "responses": {
+                    "200": { "description": "Admin profile" },
+                    "401": { "description": "Unauthorized" }
+                }
+            }
+        },
+        "/api/v1/store/admin/auth/logout": {
+            "post": {
+                "tags": ["Admin Auth"],
+                "summary": "Admin logout",
+                "description": "Revokes the current token.",
+                "security": [{ "adminToken": [] }],
+                "responses": {
+                    "200": { "description": "Logged out" },
+                    "401": { "description": "Unauthorized" }
+                }
+            }
+        },
+        "/api/v1/store/admin/auth/change-password": {
+            "post": {
+                "tags": ["Admin Auth"],
+                "summary": "Change admin password",
+                "security": [{ "adminToken": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["current_password", "new_password", "new_password_confirmation"],
+                                "properties": {
+                                    "current_password":          { "type": "string" },
+                                    "new_password":              { "type": "string", "minLength": 8 },
+                                    "new_password_confirmation": { "type": "string" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Password updated" },
+                    "422": { "description": "Current password incorrect or validation failed" },
+                    "401": { "description": "Unauthorized" }
+                }
+            }
+        },
+        "/api/v1/store/admin/stats": {
+            "get": {
+                "tags": ["Admin"],
+                "summary": "Dashboard summary cards",
+                "security": [{ "adminToken": [] }],
+                "responses": {
+                    "200": {
+                        "description": "Order counts for dashboard",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "total_orders": 7,
+                                        "in_transit":   10,
+                                        "delivered":    6,
+                                        "issues":       1
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/store/admin/activity": {
+            "get": {
+                "tags": ["Admin"],
+                "summary": "Recent order activity log",
+                "description": "Orders sorted by last update time. Used for the Activity tab in the admin panel.",
+                "security": [{ "adminToken": [] }],
+                "parameters": [
+                    { "name": "search",   "in": "query", "schema": { "type": "string" } },
+                    { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20 } }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated activity list",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "data": [
+                                            { "order_number": "STR-2026-00001", "first_name": "Jane", "last_name": "Daniel", "quantity": 1, "total": 149.00, "status": "shipped", "updated_at": "2026-06-29T10:00:00Z" }
+                                        ],
+                                        "current_page": 1, "total": 7, "per_page": 20, "last_page": 1
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
         "/api/v1/store/admin/orders": {
             "get": {
                 "tags": ["Admin"],
-                "summary": "List all orders (paginated)",
+                "summary": "List all orders",
                 "security": [{ "adminToken": [] }],
                 "parameters": [
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "required": false,
-                        "schema": { "type": "string", "enum": ["pending", "paid", "processing", "shipped", "delivered", "cancelled"] }
-                    },
-                    {
-                        "name": "search",
-                        "in": "query",
-                        "required": false,
-                        "description": "Search by order number, email, or last name",
-                        "schema": { "type": "string", "example": "STR-2026" }
-                    },
-                    {
-                        "name": "per_page",
-                        "in": "query",
-                        "required": false,
-                        "schema": { "type": "integer", "default": 20, "example": 20 }
-                    }
+                    { "name": "status",   "in": "query", "schema": { "type": "string", "enum": ["pending","paid","processing","packed","dispatched","in_transit","shipped","delivered","cancelled","delayed"] } },
+                    { "name": "issue",    "in": "query", "schema": { "type": "string", "enum": ["damaged", "lost"] }, "description": "Filter by issue type" },
+                    { "name": "search",   "in": "query", "schema": { "type": "string" }, "description": "Search by order number, name, or email" },
+                    { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20 } }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Paginated list of orders",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": { "type": "boolean", "example": true },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "data":          { "type": "array", "items": { "$ref": "#/components/schemas/AdminOrder" } },
-                                                "current_page":  { "type": "integer", "example": 1 },
-                                                "total":         { "type": "integer", "example": 42 },
-                                                "per_page":      { "type": "integer", "example": 20 },
-                                                "last_page":     { "type": "integer", "example": 3 }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "401": { "description": "Unauthorized — invalid or missing admin token" }
+                    "200": { "description": "Paginated order list" },
+                    "401": { "description": "Unauthorized" }
                 }
             }
         },
         "/api/v1/store/admin/orders/{orderNumber}": {
             "get": {
                 "tags": ["Admin"],
-                "summary": "Get full detail of a single order",
+                "summary": "Get full order detail",
                 "security": [{ "adminToken": [] }],
                 "parameters": [
-                    {
-                        "name": "orderNumber",
-                        "in": "path",
-                        "required": true,
-                        "schema": { "type": "string", "example": "STR-2026-00001" }
-                    }
+                    { "name": "orderNumber", "in": "path", "required": true, "schema": { "type": "string", "example": "STR-2026-00001" } }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Order detail",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": { "type": "boolean", "example": true },
-                                        "data":    { "$ref": "#/components/schemas/AdminOrder" }
-                                    }
-                                }
-                            }
-                        }
-                    },
+                    "200": { "description": "Order detail", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/AdminOrder" } } } } } },
                     "404": { "description": "Order not found" },
                     "401": { "description": "Unauthorized" }
                 }
@@ -372,16 +453,11 @@
         "/api/v1/store/admin/orders/{orderNumber}/status": {
             "patch": {
                 "tags": ["Admin"],
-                "summary": "Update order status",
-                "description": "Sets the order to a new status.\n\nWhen setting status to `shipped`, `tracking_number` and `courier` are **required** — the system will automatically email the customer their tracking details.",
+                "summary": "Update order shipping status",
+                "description": "Updates status and appends to the tracking timeline. Emails the customer automatically unless `notify=false`. Use the Shipping Control panel in the admin UI.",
                 "security": [{ "adminToken": [] }],
                 "parameters": [
-                    {
-                        "name": "orderNumber",
-                        "in": "path",
-                        "required": true,
-                        "schema": { "type": "string", "example": "STR-2026-00001" }
-                    }
+                    { "name": "orderNumber", "in": "path", "required": true, "schema": { "type": "string", "example": "STR-2026-00001" } }
                 ],
                 "requestBody": {
                     "required": true,
@@ -390,46 +466,48 @@
                             "schema": {
                                 "required": ["status"],
                                 "properties": {
-                                    "status": {
-                                        "type": "string",
-                                        "enum": ["paid", "processing", "shipped", "delivered", "cancelled"],
-                                        "example": "shipped"
-                                    },
-                                    "tracking_number": {
-                                        "type": "string",
-                                        "nullable": true,
-                                        "example": "1Z999AA10123456784",
-                                        "description": "Required when status = shipped"
-                                    },
-                                    "courier": {
-                                        "type": "string",
-                                        "nullable": true,
-                                        "example": "DHL",
-                                        "description": "Required when status = shipped"
-                                    }
+                                    "status":           { "type": "string", "enum": ["processing","packed","dispatched","in_transit","shipped","delivered","cancelled","delayed"] },
+                                    "issue":            { "type": "string", "nullable": true, "enum": ["damaged","lost"] },
+                                    "delay_note":       { "type": "string", "nullable": true, "example": "Weather conditions causing delays", "description": "Shown to customer on tracking page" },
+                                    "tracking_number":  { "type": "string", "nullable": true },
+                                    "courier":          { "type": "string", "nullable": true },
+                                    "notify":           { "type": "boolean", "default": true, "description": "Set false to skip emailing the customer" }
                                 }
                             }
                         }
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "Status updated — if shipped, tracking email sent to customer",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": { "type": "boolean", "example": true },
-                                        "message": { "type": "string",  "example": "Order STR-2026-00001 updated to 'shipped'." },
-                                        "data":    { "$ref": "#/components/schemas/AdminOrder" }
-                                    }
+                    "200": { "description": "Status updated, customer emailed" },
+                    "404": { "description": "Order not found" },
+                    "401": { "description": "Unauthorized" }
+                }
+            }
+        },
+        "/api/v1/store/admin/orders/{orderNumber}/issue": {
+            "patch": {
+                "tags": ["Admin"],
+                "summary": "Flag or clear an order issue",
+                "description": "Sets a problem flag (damaged/lost) on an order independently of its shipping status. Pass `null` to clear the flag.",
+                "security": [{ "adminToken": [] }],
+                "parameters": [
+                    { "name": "orderNumber", "in": "path", "required": true, "schema": { "type": "string", "example": "STR-2026-00001" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "issue": { "type": "string", "nullable": true, "enum": ["damaged", "lost"] }
                                 }
                             }
                         }
-                    },
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Issue flag updated" },
                     "404": { "description": "Order not found" },
-                    "422": { "description": "Validation error — e.g. tracking_number missing when status=shipped" },
                     "401": { "description": "Unauthorized" }
                 }
             }
