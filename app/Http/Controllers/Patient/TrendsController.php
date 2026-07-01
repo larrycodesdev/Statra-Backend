@@ -53,20 +53,56 @@ class TrendsController extends Controller
         }
 
         if (in_array($filter, ['all', 'medication'])) {
-            $logs = $patient->medicationLogs()
-                ->where('scheduled_at', '>=', now()->subDays(30))
-                ->get(['medication_name', 'dosage', 'status', 'scheduled_at', 'taken_at']);
+            $today     = now()->toDateString();
+            $todayLogs = $patient->medicationLogs()
+                ->whereDate('scheduled_at', $today)
+                ->get()
+                ->groupBy('medication_id');
 
-            $total  = $logs->count();
-            $taken  = $logs->where('status', 'taken')->count();
-            $missed = $logs->where('status', 'missed')->count();
+            $medications = $patient->medications()
+                ->orderByDesc('created_at')
+                ->get(['id', 'name', 'dosage', 'frequency', 'reminder_times', 'active'])
+                ->map(function ($med) use ($todayLogs) {
+                    $expectedDoses = count($med->reminder_times ?? ['08:00']);
+                    $logs          = $todayLogs->get($med->id, collect());
+                    $takenCount    = $logs->where('status', 'taken')->count();
+                    $missedCount   = $logs->where('status', 'missed')->count();
+
+                    $todayStatus = match (true) {
+                        ($takenCount + $missedCount) === 0 => 'pending',
+                        $takenCount === $expectedDoses     => 'taken',
+                        $missedCount === $expectedDoses    => 'missed',
+                        default                            => 'partial',
+                    };
+
+                    return [
+                        'id'           => $med->id,
+                        'name'         => $med->name,
+                        'dosage'       => $med->dosage,
+                        'frequency'    => $med->frequency,
+                        'today_status' => $todayStatus,
+                        'active'       => (bool) $med->active,
+                    ];
+                });
+
+            // 30-day adherence stats from actual logs
+            $allLogs = $patient->medicationLogs()
+                ->where('scheduled_at', '>=', now()->subDays(30))
+                ->get(['status']);
+
+            $total  = $allLogs->count();
+            $taken  = $allLogs->where('status', 'taken')->count();
+            $missed = $allLogs->where('status', 'missed')->count();
 
             $data['medication'] = [
-                'total'            => $total,
-                'taken'            => $taken,
-                'missed'           => $missed,
-                'adherence_rate'   => $total > 0 ? round($taken / $total * 100, 1) : 0,
-                'recent'           => $logs->sortByDesc('scheduled_at')->take(5)->values(),
+                'medications'    => $medications,
+                'adherence_rate' => $total > 0 ? round($taken / $total * 100, 1) : 0,
+                'total_30d'      => $total,
+                'taken_30d'      => $taken,
+                'missed_30d'     => $missed,
+                'care_team_alert' => $missed > 0
+                    ? "You missed {$missed} dose(s) in the last 30 days. Your care team has been notified."
+                    : null,
             ];
         }
 
