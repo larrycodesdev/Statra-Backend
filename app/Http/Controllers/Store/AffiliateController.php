@@ -13,6 +13,10 @@ class AffiliateController extends Controller
 {
     public function join(Request $request): JsonResponse
     {
+        if ($request->has('social_platform')) {
+            $request->merge(['social_platform' => strtolower($request->input('social_platform'))]);
+        }
+
         $data = $request->validate([
             'name'            => ['required', 'string', 'max:255'],
             'email'           => ['required', 'email', 'max:255'],
