@@ -73,6 +73,7 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     // Medications
     Route::delete('medications/clear',         [MedicationController::class, 'clearAll']);
     Route::get('medications/log',              [MedicationController::class, 'log']);
+    Route::get('medications/history',          [MedicationController::class, 'history']);
     Route::get('medications',                  [MedicationController::class, 'index']);
     Route::post('medications',                 [MedicationController::class, 'store']);
     Route::get('medications/{id}',             [MedicationController::class, 'show']);
