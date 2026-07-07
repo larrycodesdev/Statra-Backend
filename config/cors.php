@@ -28,7 +28,6 @@ return [
         'https://www.statrahealth.com',
         'https://admin.statrahealth.com',
         'https://statra-website.vercel.app',
-        'https://claude.ai',
     ],
 
     'allowed_origins_patterns' => [],
