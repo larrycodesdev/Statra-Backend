@@ -3241,6 +3241,12 @@
                                                                 "example": "daily",
                                                                 "nullable": true
                                                             },
+                                                            "period": {
+                                                                "type": "string",
+                                                                "enum": ["morning", "afternoon", "evening", "night"],
+                                                                "example": "morning",
+                                                                "nullable": true
+                                                            },
                                                             "scheduled_time": {
                                                                 "type": "string",
                                                                 "example": "08:00"
@@ -3272,6 +3278,12 @@
                                                             "frequency": {
                                                                 "type": "string",
                                                                 "example": "daily",
+                                                                "nullable": true
+                                                            },
+                                                            "period": {
+                                                                "type": "string",
+                                                                "enum": ["morning", "afternoon", "evening", "night"],
+                                                                "example": "morning",
                                                                 "nullable": true
                                                             },
                                                             "scheduled_time": {
@@ -3312,6 +3324,107 @@
                                                             "type": "integer",
                                                             "example": 1
                                                         }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/medications/history": {
+            "get": {
+                "tags": ["Patient Medications"],
+                "summary": "Medication history (taken, missed, upcoming)",
+                "description": "Returns a paginated, filterable feed of all medication log entries. `taken` and `missed` come from actual log records; `upcoming` is dynamically generated from active medication schedules (today → end_date or today + 30 days if no end_date supplied). Sort order: newest/soonest first by `scheduled_at`.",
+                "security": [{"bearerAuth": []}],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status. Omit to return all three statuses.",
+                        "schema": {
+                            "type": "string",
+                            "enum": ["taken", "missed", "upcoming"]
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "description": "Include entries with scheduled_at on or after this date (YYYY-MM-DD).",
+                        "schema": {"type": "string", "format": "date", "example": "2026-07-01"}
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "Include entries with scheduled_at on or before this date (YYYY-MM-DD). Upcoming defaults to today + 30 days when omitted.",
+                        "schema": {"type": "string", "format": "date", "example": "2026-07-31"}
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {"type": "integer", "default": 1}
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {"type": "integer", "default": 20, "maximum": 100}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated medication history",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {"type": "boolean", "example": true},
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "medication_id": {"type": "integer", "example": 1, "nullable": true},
+                                                            "name": {"type": "string", "example": "Hydroxyurea 500mg"},
+                                                            "dosage": {"type": "string", "example": "1 tablet", "nullable": true},
+                                                            "frequency": {"type": "string", "example": "daily", "nullable": true},
+                                                            "period": {
+                                                                "type": "string",
+                                                                "enum": ["morning", "afternoon", "evening", "night"],
+                                                                "example": "morning",
+                                                                "nullable": true
+                                                            },
+                                                            "scheduled_time": {"type": "string", "example": "08:00"},
+                                                            "scheduled_at": {"type": "string", "example": "2026-07-07 08:00"},
+                                                            "status": {
+                                                                "type": "string",
+                                                                "enum": ["taken", "missed", "upcoming"],
+                                                                "example": "taken"
+                                                            },
+                                                            "taken_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "nullable": true,
+                                                                "example": "2026-07-07T08:11:52.000Z"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "meta": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "current_page": {"type": "integer", "example": 1},
+                                                        "last_page": {"type": "integer", "example": 5},
+                                                        "per_page": {"type": "integer", "example": 20},
+                                                        "total": {"type": "integer", "example": 94}
                                                     }
                                                 }
                                             }
@@ -3410,11 +3523,23 @@
                                                     "reminder_times": {
                                                         "type": "array",
                                                         "items": {
-                                                            "type": "string"
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "period": {
+                                                                    "type": "string",
+                                                                    "enum": ["morning", "afternoon", "evening", "night"],
+                                                                    "example": "morning"
+                                                                },
+                                                                "time": {
+                                                                    "type": "string",
+                                                                    "pattern": "^\\d{2}:\\d{2}$",
+                                                                    "example": "08:00"
+                                                                }
+                                                            }
                                                         },
                                                         "example": [
-                                                            "08:00",
-                                                            "20:00"
+                                                            {"period": "morning", "time": "08:00"},
+                                                            {"period": "evening", "time": "20:00"}
                                                         ]
                                                     },
                                                     "remind_me": {
@@ -3502,12 +3627,24 @@
                                     "reminder_times": {
                                         "type": "array",
                                         "items": {
-                                            "type": "string",
-                                            "pattern": "^\\d{2}:\\d{2}$"
+                                            "type": "object",
+                                            "required": ["period", "time"],
+                                            "properties": {
+                                                "period": {
+                                                    "type": "string",
+                                                    "enum": ["morning", "afternoon", "evening", "night"],
+                                                    "example": "morning"
+                                                },
+                                                "time": {
+                                                    "type": "string",
+                                                    "pattern": "^\\d{2}:\\d{2}$",
+                                                    "example": "08:00"
+                                                }
+                                            }
                                         },
                                         "example": [
-                                            "08:00",
-                                            "20:00"
+                                            {"period": "morning", "time": "08:00"},
+                                            {"period": "evening", "time": "20:00"}
                                         ],
                                         "nullable": true
                                     },
@@ -3781,7 +3918,18 @@
                                     "reminder_times": {
                                         "type": "array",
                                         "items": {
-                                            "type": "string"
+                                            "type": "object",
+                                            "required": ["period", "time"],
+                                            "properties": {
+                                                "period": {
+                                                    "type": "string",
+                                                    "enum": ["morning", "afternoon", "evening", "night"]
+                                                },
+                                                "time": {
+                                                    "type": "string",
+                                                    "pattern": "^\\d{2}:\\d{2}$"
+                                                }
+                                            }
                                         },
                                         "nullable": true
                                     },
