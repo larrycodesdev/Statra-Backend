@@ -1,0 +1,106 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "STATRA — Website API",
+        "version": "1.0.0",
+        "description": "Public API endpoints for the STATRA website (statra.health).\n\nAll endpoints are unauthenticated — no Bearer token required.",
+        "contact": {
+            "email": "hello@statra.health"
+        }
+    },
+    "servers": [
+        {
+            "url": "https://statrawebapp-f7gaa7bghfczhmf7.centralus-01.azurewebsites.net",
+            "description": "Production"
+        }
+    ],
+    "tags": [
+        {
+            "name": "Contact",
+            "description": "Contact form submission"
+        }
+    ],
+    "paths": {
+        "/api/v1/website/contact": {
+            "post": {
+                "tags": ["Contact"],
+                "summary": "Submit a contact form message",
+                "description": "Saves the message to the database, sends a notification email to the Statra team at hello@statra.health (with reply-to set to the sender), and sends a confirmation email to the sender.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["full_name", "email", "message"],
+                                "properties": {
+                                    "full_name": {
+                                        "type": "string",
+                                        "example": "Jane Doe",
+                                        "maxLength": 255
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+2348012345678",
+                                        "nullable": true,
+                                        "maxLength": 30
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "jane@example.com"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Hi, I'd like to learn more about Statra for my clinic.",
+                                        "maxLength": 5000
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Message received — confirmation emails sent to both the team and the sender",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Message received. We will get back to you shortly."
+                                        },
+                                        "data": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error — missing or invalid fields",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "success": false,
+                                    "message": "Validation failed.",
+                                    "errors": {
+                                        "email": ["The email field must be a valid email address."],
+                                        "message": ["The message field is required."]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
