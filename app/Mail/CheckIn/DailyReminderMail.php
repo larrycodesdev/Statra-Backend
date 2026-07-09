@@ -4,6 +4,7 @@ namespace App\Mail\CheckIn;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -18,7 +19,10 @@ class DailyReminderMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'STATRA — Time for your daily check-in');
+        return new Envelope(
+            from: new Address('hello@statra.health', 'Statra'),
+            subject: 'STATRA — Time for your daily check-in',
+        );
     }
 
     public function content(): Content

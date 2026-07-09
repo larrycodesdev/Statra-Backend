@@ -24,7 +24,7 @@ class ContactController extends Controller
 
         $contact = ContactMessage::create($data);
 
-        Mail::to('hello@statra.health')->queue(new ContactNotificationMail($contact));
+        Mail::to('hello@statrahealth.com')->queue(new ContactNotificationMail($contact));
         Mail::to($contact->email)->queue(new ContactConfirmationMail($contact));
 
         return ApiResponse::success(null, 'Message received. We will get back to you shortly.');

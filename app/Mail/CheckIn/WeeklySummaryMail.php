@@ -4,6 +4,7 @@ namespace App\Mail\CheckIn;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -19,7 +20,10 @@ class WeeklySummaryMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'STATRA — Your weekly health summary');
+        return new Envelope(
+            from: new Address('hello@statra.health', 'Statra'),
+            subject: 'STATRA — Your weekly health summary',
+        );
     }
 
     public function content(): Content
