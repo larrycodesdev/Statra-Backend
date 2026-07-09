@@ -221,12 +221,20 @@ class MedicationController extends Controller
             if ($end)   $logsQuery->where('scheduled_at', '<=', $end   . ' 23:59:59');
 
             foreach ($logsQuery->get() as $log) {
+                $logTime  = $log->scheduled_at->format('H:i');
+                $times    = $log->medication?->reminder_times ?? [];
+                $matched  = collect($times)->first(fn($item) =>
+                    (is_array($item) ? ($item['time'] ?? $item) : $item) === $logTime
+                );
+                $period = is_array($matched) ? ($matched['period'] ?? null) : null;
+
                 $entries->push([
-                    'medication_id'  => $log->medication_id,
+                    'medication_id'  => (int) $log->medication_id,
                     'name'           => $log->medication_name,
                     'dosage'         => $log->dosage,
                     'frequency'      => $log->medication?->frequency,
-                    'scheduled_time' => $log->scheduled_at->format('H:i'),
+                    'period'         => $period,
+                    'scheduled_time' => $logTime,
                     'scheduled_at'   => $log->scheduled_at->format('Y-m-d H:i'),
                     'status'         => $log->status,
                     'taken_at'       => $log->taken_at,

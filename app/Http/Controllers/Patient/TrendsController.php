@@ -53,37 +53,68 @@ class TrendsController extends Controller
         }
 
         if (in_array($filter, ['all', 'medication'])) {
-            $today     = now()->toDateString();
-            $todayLogs = $patient->medicationLogs()
-                ->whereDate('scheduled_at', $today)
-                ->get()
-                ->groupBy('medication_id');
+            $today  = now()->toDateString();
+            $nowStr = now()->format('Y-m-d H:i');
 
             $medications = $patient->medications()
+                ->where('active', true)
                 ->orderByDesc('created_at')
-                ->get(['id', 'name', 'dosage', 'frequency', 'reminder_times', 'active'])
-                ->map(function ($med) use ($todayLogs) {
-                    $expectedDoses = count($med->reminder_times ?? ['08:00']);
-                    $logs          = $todayLogs->get($med->id, collect());
-                    $takenCount    = $logs->where('status', 'taken')->count();
-                    $missedCount   = $logs->where('status', 'missed')->count();
+                ->get();
 
-                    $todayStatus = match (true) {
-                        ($takenCount + $missedCount) === 0 => 'pending',
-                        $takenCount === $expectedDoses     => 'taken',
-                        $missedCount === $expectedDoses    => 'missed',
-                        default                            => 'partial',
-                    };
+            // Latest log per medication in one query
+            $latestLogs = $patient->medicationLogs()
+                ->whereIn('id', function ($q) use ($patient) {
+                    $q->selectRaw('MAX(id)')
+                        ->from('medication_logs')
+                        ->where('patient_id', $patient->id)
+                        ->groupBy('medication_id');
+                })
+                ->get()
+                ->keyBy('medication_id');
+
+            $medications = $medications->map(function ($med) use ($latestLogs, $today, $nowStr) {
+                $times     = $med->reminder_times ?? [['period' => null, 'time' => '08:00']];
+                $latestLog = $latestLogs->get($med->id);
+
+                if ($latestLog) {
+                    $logTime = $latestLog->scheduled_at->format('H:i');
+                    $matched = collect($times)->first(fn($item) =>
+                        (is_array($item) ? ($item['time'] ?? $item) : $item) === $logTime
+                    );
+                    $period = is_array($matched) ? ($matched['period'] ?? null) : null;
 
                     return [
-                        'id'           => $med->id,
-                        'name'         => $med->name,
-                        'dosage'       => $med->dosage,
-                        'frequency'    => $med->frequency,
-                        'today_status' => $todayStatus,
-                        'active'       => (bool) $med->active,
+                        'medication_id'  => (int) $med->id,
+                        'name'           => $med->name,
+                        'dosage'         => $med->dosage,
+                        'frequency'      => $med->frequency,
+                        'period'         => $period,
+                        'scheduled_time' => $logTime,
+                        'scheduled_at'   => $latestLog->scheduled_at->format('Y-m-d H:i'),
+                        'status'         => $latestLog->status,
+                        'taken_at'       => $latestLog->taken_at,
                     ];
-                });
+                }
+
+                $next      = collect($times)->first(fn($item) =>
+                    ($today . ' ' . (is_array($item) ? ($item['time'] ?? '08:00') : $item)) > $nowStr
+                ) ?? $times[0] ?? ['period' => null, 'time' => '08:00'];
+
+                $timeStr   = is_array($next) ? ($next['time']   ?? '08:00') : $next;
+                $periodStr = is_array($next) ? ($next['period'] ?? null)    : null;
+
+                return [
+                    'medication_id'  => (int) $med->id,
+                    'name'           => $med->name,
+                    'dosage'         => $med->dosage,
+                    'frequency'      => $med->frequency,
+                    'period'         => $periodStr,
+                    'scheduled_time' => $timeStr,
+                    'scheduled_at'   => $today . ' ' . $timeStr,
+                    'status'         => 'upcoming',
+                    'taken_at'       => null,
+                ];
+            })->values();
 
             // 30-day adherence stats from actual logs
             $allLogs = $patient->medicationLogs()
