@@ -18,7 +18,7 @@ class AffiliateWelcomeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('hello@statrahealth.com', 'Statra'),
+            from: new Address('hello@statra.health', 'Statra'),
             subject: 'Welcome to the STATRA Affiliate Program!',
         );
     }

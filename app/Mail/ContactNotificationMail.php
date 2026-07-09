@@ -19,7 +19,7 @@ class ContactNotificationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('hello@statrahealth.com', 'Statra'),
+            from: new Address('hello@statra.health', 'Statra'),
             subject: 'New Contact Message — ' . $this->contact->full_name,
             replyTo: [$this->contact->email],
         );

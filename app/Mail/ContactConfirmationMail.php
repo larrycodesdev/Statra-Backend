@@ -19,7 +19,7 @@ class ContactConfirmationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('hello@statrahealth.com', 'Statra'),
+            from: new Address('hello@statra.health', 'Statra'),
             subject: 'We received your message — Statra',
         );
     }

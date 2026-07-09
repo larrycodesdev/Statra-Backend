@@ -31,7 +31,7 @@ class OrderStatusMail extends Mailable
         };
 
         return new Envelope(
-            from: new Address('hello@statrahealth.com', 'Statra'),
+            from: new Address('hello@statra.health', 'Statra'),
             subject: $subject,
         );
     }
