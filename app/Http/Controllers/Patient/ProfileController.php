@@ -156,7 +156,7 @@ class ProfileController extends Controller
 
         $user->update(['avatar' => $url]);
 
-        return ApiResponse::success(['avatar' => $url], 'Avatar uploaded successfully.');
+        return ApiResponse::success($url, 'Avatar uploaded successfully.');
     }
 
     public function updateFcmToken(Request $request, NotificationService $notificationService): JsonResponse
