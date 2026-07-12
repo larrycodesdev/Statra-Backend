@@ -11,6 +11,7 @@ class VitalReading extends Model
     protected $fillable = [
         'patient_id', 'device_id', 'type',
         'value', 'unit', 'recorded_at',
+        'activity_context', 'quality_flag',
     ];
 
     protected function casts(): array

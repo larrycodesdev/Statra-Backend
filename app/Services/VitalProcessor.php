@@ -75,6 +75,9 @@ class VitalProcessor
             $spo2At   = !empty($raw['spo2Date']) ? Carbon::parse($raw['spo2Date']) : $ts;
             $bpAt     = !empty($raw['bpDate'])   ? Carbon::parse($raw['bpDate'])   : $ts;
 
+            $activityContext = $raw['activityContext'] ?? null;
+            $spo2Quality     = $raw['spo2Quality']     ?? 'good';
+
             $scalars = [
                 ['field' => 'heartRate', 'type' => 'heart_rate',  'unit' => 'bpm',   'at' => $ts,     'float' => false],
                 ['field' => 'temp',      'type' => 'temperature', 'unit' => '°C',    'at' => $ts,     'float' => true],
@@ -88,10 +91,12 @@ class VitalProcessor
                 $val = $raw[$m['field']] ?? 0;
                 if ($val <= 0) continue;
                 $normalized[] = [
-                    'type'        => $m['type'],
-                    'value'       => $m['float'] ? (float) $val : (int) $val,
-                    'unit'        => $m['unit'],
-                    'recorded_at' => $m['at'],
+                    'type'             => $m['type'],
+                    'value'            => $m['float'] ? (float) $val : (int) $val,
+                    'unit'             => $m['unit'],
+                    'recorded_at'      => $m['at'],
+                    'activity_context' => $activityContext,
+                    'quality_flag'     => $m['type'] === 'spo2' ? $spo2Quality : 'good',
                 ];
             }
 

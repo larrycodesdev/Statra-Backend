@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Alert;
 use App\Models\Device;
 use App\Models\Patient;
 use App\Models\VitalReading;
@@ -26,21 +27,46 @@ class ProcessVitalBatch implements ShouldQueue
     {
         $patient = Patient::findOrFail($this->patientId);
         $device  = Device::findOrFail($this->deviceId);
-        $alerts  = [];
 
         foreach ($this->readings as $reading) {
             $vitalReading = VitalReading::create([
-                'patient_id'  => $patient->id,
-                'device_id'   => $device->id,
-                'type'        => $reading['type'],
-                'value'       => $reading['value'],
-                'unit'        => $reading['unit'] ?? null,
-                'recorded_at' => $reading['recorded_at'],
+                'patient_id'       => $patient->id,
+                'device_id'        => $device->id,
+                'type'             => $reading['type'],
+                'value'            => $reading['value'],
+                'unit'             => $reading['unit'] ?? null,
+                'recorded_at'      => $reading['recorded_at'],
+                'activity_context' => $reading['activity_context'] ?? null,
+                'quality_flag'     => $reading['quality_flag'] ?? 'good',
             ]);
+
+            // Immediate hard threshold: temp >= 38.5°C → urgent alert regardless of baseline
+            if ($vitalReading->type === 'temperature') {
+                $tempValue = is_array($vitalReading->value)
+                    ? (float) ($vitalReading->value['value'] ?? 0)
+                    : (float) $vitalReading->value;
+
+                if ($tempValue >= 38.5) {
+                    Alert::firstOrCreate(
+                        [
+                            'patient_id'       => $patient->id,
+                            'vital_reading_id' => $vitalReading->id,
+                            'type'             => 'temperature_high',
+                        ],
+                        [
+                            'level'   => 1,
+                            'message' => "Urgent: Temperature is {$tempValue}°C — fever ≥38.5°C requires immediate evaluation.",
+                            'status'  => 'pending',
+                        ]
+                    );
+                    SendAlertNotification::dispatch($vitalReading->id);
+                    continue;
+                }
+            }
 
             $alert = $alertEngine->evaluate($vitalReading, $patient);
             if ($alert) {
-                $alerts[] = $alert->id;
+                SendAlertNotification::dispatch($alert->id);
             }
         }
 

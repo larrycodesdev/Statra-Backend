@@ -13,6 +13,7 @@ use App\Http\Controllers\Patient\SettingsController;
 use App\Http\Controllers\Patient\SymptomController;
 use App\Http\Controllers\Patient\TriggerController;
 use App\Http\Controllers\Patient\TrendsController;
+use App\Http\Controllers\Patient\BaselineController;
 use App\Http\Controllers\Patient\VitalsController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,8 +52,9 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     Route::get('device/status',    [DeviceController::class, 'status']);
 
     // Vitals
-    Route::post('vitals/sync', [VitalsController::class, 'sync']);
-    Route::get('vitals',       [VitalsController::class, 'index']);
+    Route::post('vitals/sync',           [VitalsController::class,  'sync']);
+    Route::get('vitals',                 [VitalsController::class,  'index']);
+    Route::get('vitals/baseline-score',  [BaselineController::class, 'score']);
 
     // Alerts & Notifications
     Route::get('alerts',                          [AlertController::class, 'index']);

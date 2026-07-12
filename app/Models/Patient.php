@@ -9,6 +9,7 @@ class Patient extends Model
     protected $fillable = [
         'user_id', 'genotype', 'blood_type', 'date_of_birth',
         'gender', 'condition', 'assigned_doctor_id',
+        'calibration_status', 'calibration_start_at',
     ];
 
     protected function casts(): array
@@ -87,6 +88,16 @@ class Patient extends Model
     public function notifications(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(PatientNotification::class);
+    }
+
+    public function baselines(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PatientBaseline::class);
+    }
+
+    public function compositeDeviationScores(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CompositeDeviationScore::class);
     }
 
     // Age derived from date_of_birth

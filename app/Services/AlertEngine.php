@@ -22,7 +22,7 @@ class AlertEngine
         ],
         'temperature' => [
             'warning'  => 37.8,
-            'critical' => 39.0,
+            'critical' => 38.5,
         ],
     ];
 
