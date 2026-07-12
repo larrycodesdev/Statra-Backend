@@ -1,0 +1,2605 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "STATRA — Doctor Dashboard API",
+        "description": "REST API for the STATRA Doctor Dashboard web app.\n\n### Roles\n| Role | Access scope |\n|---|---|\n| `superadmin` | All patients across all hospitals |\n| `admin` | All patients + staff within their hospital |\n| `doctor` | Only their assigned patients |\n| `staff` | Hospital-wide read-only; cannot write notes or resolve alerts |\n\n### Auth flow\n1. `POST /doctor/auth/register` with `role: doctor` or `role: staff` → returns token with `approval_status: pending`\n2. An **admin** approves via `PATCH /doctor/staff/{id}/approve`\n3. Doctor/staff can then access all protected routes — unapproved accounts receive **403 Account pending approval**\n\nAll protected routes require `Authorization: Bearer {token}`.",
+        "contact": {
+            "email": "hello@statra.health"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "https://statrawebapp-f7gaa7bghfczhmf7.centralus-01.azurewebsites.net",
+            "description": "Production"
+        },
+        {
+            "url": "http://localhost:8000",
+            "description": "Local dev"
+        }
+    ],
+    "paths": {
+        "/api/v1/doctor/auth/register": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register as doctor or staff",
+                "description": "Creates the account with `approval_status: pending`. The returned token cannot access protected routes until an admin approves the account.",
+                "operationId": "74dd9e0569afcf16df8355963a6c8c48",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "role",
+                                    "first_name",
+                                    "last_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "role": {
+                                        "type": "string",
+                                        "example": "doctor",
+                                        "enum": [
+                                            "doctor",
+                                            "staff"
+                                        ]
+                                    },
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Amara"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Osei"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "amara@hospital.org"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Secret1234"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Secret1234"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+233241234567",
+                                        "nullable": true
+                                    },
+                                    "hospital_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "department": {
+                                        "type": "string",
+                                        "example": "Haematology",
+                                        "nullable": true
+                                    },
+                                    "specialisation": {
+                                        "type": "string",
+                                        "example": "Sickle Cell Disease",
+                                        "nullable": true
+                                    },
+                                    "license_number": {
+                                        "type": "string",
+                                        "example": "GH-MED-00123",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Registered (pending approval)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/auth/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login",
+                "description": "Returns a Sanctum token. Check `approval_status` — if `pending`, the token cannot access protected routes.",
+                "operationId": "a568b8ccfae31a698c77324756a62d3e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "amara@hospital.org"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Secret1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/auth/me": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Get current user profile",
+                "operationId": "dea9021e7b23ac9700bbd49e31fa8a42",
+                "responses": {
+                    "200": {
+                        "description": "Current user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 7
+                                                },
+                                                "uuid": {
+                                                    "type": "string",
+                                                    "example": "a1b2c3..."
+                                                },
+                                                "fullName": {
+                                                    "type": "string",
+                                                    "example": "Dr. Amara Osei"
+                                                },
+                                                "initials": {
+                                                    "type": "string",
+                                                    "example": "AO"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "amara@hospital.org"
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "avatar": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "role": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "doctor",
+                                                        "admin",
+                                                        "staff",
+                                                        "superadmin"
+                                                    ]
+                                                },
+                                                "hospital": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "Korle Bu Teaching Hospital"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Account pending approval",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/auth/logout": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout (revoke token)",
+                "operationId": "abf767cd255286252c9c9e2f6b5ff1a8",
+                "responses": {
+                    "200": {
+                        "description": "Logged out",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Send password reset link",
+                "operationId": "e7fab2acbc568a5234f7a3b64581b4ec",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Reset link sent (if email exists)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset password with token",
+                "operationId": "06c7c0af322d1e815556d4891f229a4a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password reset",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid/expired token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/dashboard/summary": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Dashboard summary stats",
+                "description": "All counts are scoped by role: doctor→assigned patients, admin→hospital, superadmin→all.",
+                "operationId": "ed3b1ac2af99651728c4aae6d5ee741d",
+                "responses": {
+                    "200": {
+                        "description": "Summary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "totalPatients": {
+                                                    "type": "integer",
+                                                    "example": 48
+                                                },
+                                                "alertLevelCounts": {
+                                                    "properties": {
+                                                        "L1": {
+                                                            "description": "Critical pending alerts",
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        },
+                                                        "L2": {
+                                                            "description": "Warning pending alerts",
+                                                            "type": "integer",
+                                                            "example": 5
+                                                        },
+                                                        "L3": {
+                                                            "description": "Patients with no active alert",
+                                                            "type": "integer",
+                                                            "example": 41
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "pendingAlerts": {
+                                                    "type": "integer",
+                                                    "example": 7
+                                                },
+                                                "resolvedToday": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "readmissionRate": {
+                                                    "description": "Placeholder — requires discharge tracking",
+                                                    "nullable": true
+                                                },
+                                                "lastUpdatedAt": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/dashboard/alert-feed": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Paginated alert feed",
+                "operationId": "de84b64d78184c9e56fe2a33e3dfe3c3",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "acknowledged",
+                                "resolved"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "level",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                1,
+                                2
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alert feed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AlertItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginatedMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/dashboard/weekly-alert-volume": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "7-day alert volume trend",
+                "operationId": "14ef5744890032c276cebc5208142f2d",
+                "responses": {
+                    "200": {
+                        "description": "Weekly volume",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "volume": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "date": {
+                                                                "type": "string",
+                                                                "example": "2026-07-06"
+                                                            },
+                                                            "label": {
+                                                                "type": "string",
+                                                                "example": "Sun"
+                                                            },
+                                                            "count": {
+                                                                "type": "integer",
+                                                                "example": 4
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/patients": {
+            "get": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "List patients (role-scoped)",
+                "operationId": "647a0febe8d8e9dfcb7897bcbd4bd4a2",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PatientCard"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginatedMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Create patient (admin/superadmin only)",
+                "operationId": "92b4e7a78e4b1bd1e4881b8cf6863aec",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "James Kwame"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "james@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Welcome123"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "genotype": {
+                                        "type": "string",
+                                        "example": "SS",
+                                        "nullable": true
+                                    },
+                                    "blood_type": {
+                                        "type": "string",
+                                        "example": "O+",
+                                        "nullable": true
+                                    },
+                                    "date_of_birth": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "other"
+                                        ]
+                                    },
+                                    "hospital_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "assigned_doctor_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Patient created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/patients/{id}": {
+            "get": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Get patient detail",
+                "operationId": "73e6ad968e38e19105b4ed17018dd995",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 12
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient detail",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "displayId": {
+                                                    "type": "string",
+                                                    "example": "SCW-012"
+                                                },
+                                                "healthScore": {
+                                                    "type": "integer",
+                                                    "example": 65,
+                                                    "nullable": true
+                                                },
+                                                "alertLevel": {
+                                                    "type": "string",
+                                                    "example": "L2",
+                                                    "enum": [
+                                                        "L1",
+                                                        "L2",
+                                                        "L3"
+                                                    ]
+                                                },
+                                                "calibrationStatus": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "enum": [
+                                                        "calibrating",
+                                                        "active"
+                                                    ]
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "James Kwame"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "james@example.com"
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "avatar": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "dateOfBirth": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "nullable": true
+                                                },
+                                                "age": {
+                                                    "type": "integer",
+                                                    "example": 24,
+                                                    "nullable": true
+                                                },
+                                                "gender": {
+                                                    "type": "string",
+                                                    "example": "male",
+                                                    "nullable": true
+                                                },
+                                                "sickleCellType": {
+                                                    "type": "string",
+                                                    "example": "SS",
+                                                    "nullable": true
+                                                },
+                                                "genotype": {
+                                                    "type": "string",
+                                                    "example": "SS",
+                                                    "nullable": true
+                                                },
+                                                "bloodType": {
+                                                    "type": "string",
+                                                    "example": "O+",
+                                                    "nullable": true
+                                                },
+                                                "condition": {
+                                                    "nullable": true
+                                                },
+                                                "ward": {
+                                                    "type": "string",
+                                                    "example": "Haematology Ward A",
+                                                    "nullable": true
+                                                },
+                                                "admittedAt": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "nullable": true
+                                                },
+                                                "nextAppointmentAt": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "assignedDoctor": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "assignedNurse": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "devices": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "emergencyContacts": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/patients/{id}/vitals": {
+            "get": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Patient vitals snapshot",
+                "description": "Returns the latest reading per vital type plus a time-series for the requested range.",
+                "operationId": "dc041b2df39131031b74e47569e708a1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 12
+                        }
+                    },
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "24h",
+                            "enum": [
+                                "1h",
+                                "6h",
+                                "24h",
+                                "7d",
+                                "30d"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vitals snapshot",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "heartRate": {
+                                                    "properties": {
+                                                        "current": {
+                                                            "example": 88,
+                                                            "nullable": true
+                                                        },
+                                                        "unit": {
+                                                            "type": "string",
+                                                            "example": "bpm"
+                                                        },
+                                                        "recordedAt": {
+                                                            "type": "string",
+                                                            "format": "date-time",
+                                                            "nullable": true
+                                                        },
+                                                        "series": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "object"
+                                                            }
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "spo2": {
+                                                    "description": "SpO2 (%), same shape",
+                                                    "type": "object"
+                                                },
+                                                "temperature": {
+                                                    "description": "Temperature (°C), same shape",
+                                                    "type": "object"
+                                                },
+                                                "hrv": {
+                                                    "description": "HRV (ms), same shape",
+                                                    "type": "object"
+                                                },
+                                                "steps": {
+                                                    "description": "Steps, same shape",
+                                                    "type": "object"
+                                                },
+                                                "sleepState": {
+                                                    "description": "Sleep state, same shape",
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/patients/{id}/alerts": {
+            "get": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Patient alert history",
+                "operationId": "0349d2da9225a887c98bce5d30ca6098",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alert list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AlertItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginatedMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/patients/{id}/medications": {
+            "get": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Patient medications",
+                "operationId": "2f1ab48ad74fe333ba32eb117fef8ae9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Medication list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/patients/{id}/notes": {
+            "post": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Add medical note (not available to staff)",
+                "operationId": "4b80c75dc2dcc51ac2b3e45f198afb25",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Pain Crisis Follow-up"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Patient presented with VOC grade 7/10..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Note added",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Staff role is read-only",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/alerts": {
+            "get": {
+                "tags": [
+                    "Alerts"
+                ],
+                "summary": "List alerts (role-scoped)",
+                "operationId": "f517399961d4e8021a119c70ccc35794",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "acknowledged",
+                                "resolved"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "level",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                1,
+                                2
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alert list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AlertItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginatedMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/alerts/{id}/resolve": {
+            "put": {
+                "tags": [
+                    "Alerts"
+                ],
+                "summary": "Resolve an alert",
+                "operationId": "ac10a3675b0b490416e2c8bb5c837648",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alert resolved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/alerts/{id}/assign": {
+            "put": {
+                "tags": [
+                    "Alerts"
+                ],
+                "summary": "Assign alert to a doctor (doctor/admin/superadmin only)",
+                "operationId": "5320a8ef60ca8e34713585252170fdee",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "doctor_id"
+                                ],
+                                "properties": {
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 3
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Alert assigned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Staff cannot assign",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/appointments": {
+            "get": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "List appointments (role-scoped)",
+                "operationId": "d3f66602a005c391d71491c801277cb3",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "upcoming",
+                                "completed",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Appointment list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AppointmentItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginatedMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Create appointment (not available to staff)",
+                "operationId": "8cecf905318ac638291910b647d99943",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "patient_id",
+                                    "scheduled_at"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 12
+                                    },
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-07-20T10:00:00Z"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "Follow-up",
+                                        "nullable": true
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Appointment created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Staff cannot create",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/appointments/{id}": {
+            "put": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Update appointment (not available to staff)",
+                "operationId": "e20fec695de97089ed6d21b051865439",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "upcoming",
+                                            "completed",
+                                            "cancelled"
+                                        ]
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Cancel/delete appointment (not available to staff)",
+                "operationId": "75b0c6f017dcc945232aba655de051f3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Appointment cancelled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/staff": {
+            "get": {
+                "tags": [
+                    "Staff"
+                ],
+                "summary": "List staff members (admin/superadmin only)",
+                "description": "Admin sees only their hospital's staff. Superadmin sees all.",
+                "operationId": "55fd630304127a71a72652c9b8b2f8e1",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "doctor",
+                                "staff",
+                                "admin"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "approval_status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "approved",
+                                "rejected"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Staff list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 7
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Dr. Amara Osei"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "example": "amara@hospital.org"
+                                                    },
+                                                    "role": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "doctor",
+                                                            "staff",
+                                                            "admin"
+                                                        ]
+                                                    },
+                                                    "approvalStatus": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "pending",
+                                                            "approved",
+                                                            "rejected"
+                                                        ]
+                                                    },
+                                                    "registeredAt": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Doctor/staff cannot access",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/staff/{id}/approve": {
+            "patch": {
+                "tags": [
+                    "Staff"
+                ],
+                "summary": "Approve or reject a staff/doctor account",
+                "operationId": "a1510ada4c0000b480b1e749b46370eb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "example": "approve",
+                                        "enum": [
+                                            "approve",
+                                            "reject"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 7
+                                                },
+                                                "approvalStatus": {
+                                                    "type": "string",
+                                                    "example": "approved"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/reports/summary": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Aggregated report summary",
+                "operationId": "43ee23c1ff1e21a92c91e70f69f0bd92",
+                "responses": {
+                    "200": {
+                        "description": "Summary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "totalPatients": {
+                                                    "type": "integer",
+                                                    "example": 48
+                                                },
+                                                "totalAlerts": {
+                                                    "type": "integer",
+                                                    "example": 120
+                                                },
+                                                "criticalAlerts": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "warningAlerts": {
+                                                    "type": "integer",
+                                                    "example": 38
+                                                },
+                                                "resolvedAlerts": {
+                                                    "type": "integer",
+                                                    "example": 95
+                                                },
+                                                "last7DaysAlerts": {
+                                                    "type": "integer",
+                                                    "example": 18
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/reports/weekly-alert-trend": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "7-day alert count trend",
+                "operationId": "5ccaec13cddf400d52b90317b9b28638",
+                "responses": {
+                    "200": {
+                        "description": "Trend data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "trend": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "date": {
+                                                                "type": "string",
+                                                                "example": "2026-07-06"
+                                                            },
+                                                            "label": {
+                                                                "type": "string",
+                                                                "example": "Sun"
+                                                            },
+                                                            "count": {
+                                                                "type": "integer",
+                                                                "example": 4
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/reports/alert-type-breakdown": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Alert count grouped by type",
+                "operationId": "55fa6b8bb13bc09bd538f11ad9285c17",
+                "responses": {
+                    "200": {
+                        "description": "Breakdown",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "breakdown": {
+                                                    "type": "object",
+                                                    "example": {
+                                                        "fever": 14,
+                                                        "hypoxia": 8,
+                                                        "tachycardia": 5
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/reports/health-trends": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Raw vital readings for trend charts",
+                "operationId": "2ac5d21a3ad8ca8c9bad414b781c7d3a",
+                "parameters": [
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "heart_rate",
+                                "spo2",
+                                "temperature",
+                                "hrv",
+                                "steps",
+                                "sleep_state"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "7d",
+                            "enum": [
+                                "7d",
+                                "30d",
+                                "90d"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Readings array",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/reports/export": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Export vitals as CSV",
+                "operationId": "faeb7e51b52be8be501f4984d96115ec",
+                "parameters": [
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "7d",
+                            "enum": [
+                                "7d",
+                                "30d",
+                                "90d"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV file download",
+                        "content": {
+                            "text/csv": {}
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "SuccessResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Operation successful."
+                    },
+                    "data": {
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Invalid credentials."
+                    }
+                },
+                "type": "object"
+            },
+            "ValidationError": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Validation failed."
+                    },
+                    "errors": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginatedMeta": {
+                "properties": {
+                    "current_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "example": 20
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 84
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "example": 5
+                    }
+                },
+                "type": "object"
+            },
+            "AuthResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Login successful."
+                    },
+                    "data": {
+                        "properties": {
+                            "token": {
+                                "type": "string",
+                                "example": "1|abc123"
+                            },
+                            "approval_status": {
+                                "type": "string",
+                                "example": "approved",
+                                "enum": [
+                                    "pending",
+                                    "approved"
+                                ]
+                            },
+                            "user": {
+                                "properties": {
+                                    "id": {
+                                        "type": "integer",
+                                        "example": 7
+                                    },
+                                    "uuid": {
+                                        "type": "string",
+                                        "example": "a1b2c3d4-..."
+                                    },
+                                    "fullName": {
+                                        "type": "string",
+                                        "example": "Dr. Amara Osei"
+                                    },
+                                    "initials": {
+                                        "type": "string",
+                                        "example": "AO"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "amara@hospital.org"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "doctor",
+                                        "enum": [
+                                            "doctor",
+                                            "admin",
+                                            "staff",
+                                            "superadmin"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PatientCard": {
+                "description": "Compact patient row for list views",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "displayId": {
+                        "description": "Human-readable ID shown in the UI",
+                        "type": "string",
+                        "example": "SCW-012"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "James Kwame"
+                    },
+                    "avatar": {
+                        "type": "string",
+                        "example": "https://...",
+                        "nullable": true
+                    },
+                    "age": {
+                        "type": "integer",
+                        "example": 24,
+                        "nullable": true
+                    },
+                    "gender": {
+                        "type": "string",
+                        "example": "male",
+                        "nullable": true
+                    },
+                    "genotype": {
+                        "type": "string",
+                        "example": "SS",
+                        "nullable": true
+                    },
+                    "ward": {
+                        "type": "string",
+                        "example": "Haematology Ward A",
+                        "nullable": true
+                    },
+                    "admittedAt": {
+                        "type": "string",
+                        "example": "2026-06-01",
+                        "nullable": true
+                    },
+                    "healthScore": {
+                        "description": "Composite score: urgent=20, elevated=45, watch=65, stable=85. null during 28-day calibration.",
+                        "type": "integer",
+                        "example": 65,
+                        "nullable": true
+                    },
+                    "alertLevel": {
+                        "description": "L1=critical pending alert, L2=warning pending alert, L3=no active alert",
+                        "type": "string",
+                        "example": "L2",
+                        "enum": [
+                            "L1",
+                            "L2",
+                            "L3"
+                        ]
+                    },
+                    "calibrationStatus": {
+                        "type": "string",
+                        "example": "active",
+                        "nullable": true,
+                        "enum": [
+                            "calibrating",
+                            "active"
+                        ]
+                    },
+                    "assignedDoctor": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 3
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Dr. Kofi Mensah"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "assignedNurse": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 5
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Nurse Abena Boateng"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AlertItem": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 44
+                    },
+                    "level": {
+                        "type": "string",
+                        "example": "L1",
+                        "enum": [
+                            "L1",
+                            "L2",
+                            "L3"
+                        ]
+                    },
+                    "rawLevel": {
+                        "description": "Backend level: 1=critical, 2=warning",
+                        "type": "integer",
+                        "example": 1,
+                        "enum": [
+                            1,
+                            2
+                        ]
+                    },
+                    "type": {
+                        "type": "string",
+                        "example": "fever"
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Temperature 38.7°C exceeds threshold"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "pending",
+                        "enum": [
+                            "pending",
+                            "acknowledged",
+                            "resolved"
+                        ]
+                    },
+                    "resolvedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-07-12T08:31:00Z"
+                    },
+                    "patient": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 12
+                            },
+                            "displayId": {
+                                "type": "string",
+                                "example": "SCW-012"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "James Kwame"
+                            },
+                            "avatar": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "vital": {
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "example": "temperature"
+                            },
+                            "value": {
+                                "example": 38.7
+                            },
+                            "unit": {
+                                "type": "string",
+                                "example": "°C"
+                            },
+                            "recordedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AppointmentItem": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 9
+                    },
+                    "scheduledAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-07-20T10:00:00Z"
+                    },
+                    "type": {
+                        "type": "string",
+                        "example": "Follow-up",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "upcoming",
+                        "enum": [
+                            "upcoming",
+                            "completed",
+                            "cancelled"
+                        ]
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "patient": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 12
+                            },
+                            "displayId": {
+                                "type": "string",
+                                "example": "SCW-012"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "James Kwame"
+                            },
+                            "avatar": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "bearerFormat": "Sanctum",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Auth",
+            "description": "Register, login, profile, password reset"
+        },
+        {
+            "name": "Dashboard",
+            "description": "Summary stats, alert feed, weekly trend"
+        },
+        {
+            "name": "Patients",
+            "description": "Patient list, detail, vitals, alerts, medications, notes"
+        },
+        {
+            "name": "Alerts",
+            "description": "Alert management — list, resolve, assign"
+        },
+        {
+            "name": "Appointments",
+            "description": "Appointment scheduling"
+        },
+        {
+            "name": "Staff",
+            "description": "Staff listing and approval (admin/superadmin only)"
+        },
+        {
+            "name": "Reports",
+            "description": "Aggregated health data and CSV export"
+        }
+    ]
+}
