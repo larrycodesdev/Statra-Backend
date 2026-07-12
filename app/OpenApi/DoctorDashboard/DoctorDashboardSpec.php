@@ -10,20 +10,100 @@ use OpenApi\Attributes as OA;
     description: <<<'MD'
 REST API for the STATRA Doctor Dashboard web app.
 
-### Roles
-| Role | Access scope |
+---
+
+## How to use this docs
+
+1. Click **Authorize** (top right) and paste your Bearer token.
+2. All endpoints auto-include the token after that.
+3. To get a token: expand **Auth → POST /auth/login**, click **Try it out**, fill the body, hit **Execute**.
+
+---
+
+## Standard response envelope
+
+Every response wraps data in this shape:
+
+```json
+{ "success": true, "message": "...", "data": { ... } }
+```
+
+Paginated lists add a `meta` key:
+```json
+{ "success": true, "data": [...], "meta": { "current_page": 1, "per_page": 20, "total": 84, "last_page": 5 } }
+```
+
+Errors:
+```json
+{ "success": false, "message": "Human-readable message." }
+```
+
+Validation errors (422):
+```json
+{ "success": false, "message": "Validation failed.", "errors": { "field": ["reason"] } }
+```
+
+---
+
+## Role system
+
+All data queries are scoped **automatically** by the backend based on the token's role. You don't pass a role param — the backend reads it from the token.
+
+| Role | What they can query |
 |---|---|
 | `superadmin` | All patients across all hospitals |
 | `admin` | All patients + staff within their hospital |
-| `doctor` | Only their assigned patients |
-| `staff` | Hospital-wide read-only; cannot write notes or resolve alerts |
+| `doctor` | Only patients where they are the assigned doctor |
+| `staff` | Same patient scope as admin but cannot create/edit |
 
-### Auth flow
-1. `POST /doctor/auth/register` with `role: doctor` or `role: staff` → returns token with `approval_status: pending`
-2. An **admin** approves via `PATCH /doctor/staff/{id}/approve`
-3. Doctor/staff can then access all protected routes — unapproved accounts receive **403 Account pending approval**
+### Write restrictions (backend returns 403 for these)
 
-All protected routes require `Authorization: Bearer {token}`.
+| Action | doctor | admin | staff | superadmin |
+|---|---|---|---|---|
+| POST /patients/{id}/notes | ✅ | ✅ | ❌ | ✅ |
+| POST/DELETE /appointments | ✅ | ✅ | ❌ | ✅ |
+| PUT /alerts/{id}/assign | ✅ | ✅ | ❌ | ✅ |
+| PUT /alerts/{id}/resolve | ✅ | ✅ | ✅ | ✅ |
+| PATCH /staff/{id}/approve | ❌ | ✅ | ❌ | ✅ |
+| POST /patients | ❌ | ✅ | ❌ | ✅ |
+
+---
+
+## Approval flow
+
+Doctors and staff must be approved before they can use the API:
+
+1. `POST /auth/register` with `role: "doctor"` or `role: "staff"`
+2. Response has `approval_status: "pending"` — the token is issued but all protected routes return **403 Account pending approval**
+3. An admin calls `PATCH /staff/{id}/approve` with `action: "approve"`
+4. The doctor/staff can now access all protected routes
+
+---
+
+## Key field reference
+
+### healthScore
+Derived from each patient's personal 28-day vital baseline. Never population-compared.
+
+| Value | Status | Colour |
+|---|---|---|
+| `85` | Stable | Green |
+| `65` | Watch | Yellow |
+| `45` | Elevated | Orange |
+| `20` | Urgent | Red |
+| `null` | Calibrating — less than 28 days of data | Grey |
+
+### alertLevel
+Highest-priority **pending** alert on the patient. Resolved alerts do not affect this.
+
+| Value | Meaning | Colour |
+|---|---|---|
+| `"L1"` | Critical alert pending | Red |
+| `"L2"` | Warning alert pending | Amber |
+| `"L3"` | No pending alerts | Green |
+
+### displayId
+Human-readable ID shown in the UI: `SCW-001`, `SCW-042`, etc. Always display this instead of the numeric `id`. Use numeric `id` only in URL path params.
 MD,
     contact: new OA\Contact(email: 'hello@statra.health')
 )]
@@ -31,13 +111,13 @@ MD,
 #[OA\Server(url: 'http://localhost:8000', description: 'Local dev')]
 #[OA\SecurityScheme(securityScheme: 'bearerAuth', type: 'http', scheme: 'bearer', bearerFormat: 'Sanctum')]
 
-#[OA\Tag(name: 'Auth',         description: 'Register, login, profile, password reset')]
-#[OA\Tag(name: 'Dashboard',    description: 'Summary stats, alert feed, weekly trend')]
-#[OA\Tag(name: 'Patients',     description: 'Patient list, detail, vitals, alerts, medications, notes')]
-#[OA\Tag(name: 'Alerts',       description: 'Alert management — list, resolve, assign')]
-#[OA\Tag(name: 'Appointments', description: 'Appointment scheduling')]
-#[OA\Tag(name: 'Staff',        description: 'Staff listing and approval (admin/superadmin only)')]
-#[OA\Tag(name: 'Reports',      description: 'Aggregated health data and CSV export')]
+#[OA\Tag(name: 'Auth',         description: '**Start here.** Use POST /auth/login to get a token, then click Authorize at the top of the page.')]
+#[OA\Tag(name: 'Dashboard',    description: 'Summary stats for the dashboard home page. All counts are scoped by your role automatically.')]
+#[OA\Tag(name: 'Patients',     description: 'Patient list, detail, vitals snapshot, medications, and medical notes. Vitals return a typed object — not a flat array.')]
+#[OA\Tag(name: 'Alerts',       description: 'Alert feed and management. Levels are returned as L1/L2/L3 strings, not integers.')]
+#[OA\Tag(name: 'Appointments', description: 'Appointment scheduling. Includes a `type` free-text field. Staff role cannot create or delete.')]
+#[OA\Tag(name: 'Staff',        description: '**Admin and superadmin only.** Lists doctors/staff and handles the approve/reject flow for pending accounts.')]
+#[OA\Tag(name: 'Reports',      description: 'Aggregated data for reports page. Last endpoint exports a CSV file.')]
 
 class DoctorDashboardSpec
 {
@@ -366,6 +446,7 @@ class DoctorDashboardSpec
     #[OA\Get(
         path: '/api/v1/doctor/patients',
         summary: 'List patients (role-scoped)',
+        description: 'Returns paginated patient cards. The backend scopes results by your role automatically — you do not pass a role param. Each card includes `healthScore` (number or null), `alertLevel` (L1/L2/L3 string), and `displayId` (SCW-XXX). Show `displayId` in the UI, use numeric `id` in API calls.',
         tags: ['Patients'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -460,7 +541,18 @@ class DoctorDashboardSpec
     #[OA\Get(
         path: '/api/v1/doctor/patients/{id}/vitals',
         summary: 'Patient vitals snapshot',
-        description: 'Returns the latest reading per vital type plus a time-series for the requested range.',
+        description: <<<'MD'
+Returns a **typed snapshot object** — NOT a flat array.
+
+Each key is a vital type. Access data like:
+- Latest value: `heartRate.current`
+- Unit: `heartRate.unit`
+- For charts: `heartRate.series` (array, newest first, max 100 points)
+
+If no reading exists in the range, `current` is null and `series` is empty.
+
+Available keys: `heartRate`, `spo2`, `temperature`, `hrv`, `steps`, `sleepState`
+MD,
         tags: ['Patients'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -549,6 +641,7 @@ class DoctorDashboardSpec
     #[OA\Get(
         path: '/api/v1/doctor/alerts',
         summary: 'List alerts (role-scoped)',
+        description: 'Alert `level` is returned as a string: `"L1"` (critical) or `"L2"` (warning). The raw integer (1 or 2) is in `rawLevel` if needed for query params. Filter by `?level=1` (integer) but read back `"L1"` (string).',
         tags: ['Alerts'],
         security: [['bearerAuth' => []]],
         parameters: [

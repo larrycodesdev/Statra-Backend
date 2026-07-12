@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "STATRA — Doctor Dashboard API",
-        "description": "REST API for the STATRA Doctor Dashboard web app.\n\n### Roles\n| Role | Access scope |\n|---|---|\n| `superadmin` | All patients across all hospitals |\n| `admin` | All patients + staff within their hospital |\n| `doctor` | Only their assigned patients |\n| `staff` | Hospital-wide read-only; cannot write notes or resolve alerts |\n\n### Auth flow\n1. `POST /doctor/auth/register` with `role: doctor` or `role: staff` → returns token with `approval_status: pending`\n2. An **admin** approves via `PATCH /doctor/staff/{id}/approve`\n3. Doctor/staff can then access all protected routes — unapproved accounts receive **403 Account pending approval**\n\nAll protected routes require `Authorization: Bearer {token}`.",
+        "description": "REST API for the STATRA Doctor Dashboard web app.\n\n---\n\n## How to use this docs\n\n1. Click **Authorize** (top right) and paste your Bearer token.\n2. All endpoints auto-include the token after that.\n3. To get a token: expand **Auth → POST /auth/login**, click **Try it out**, fill the body, hit **Execute**.\n\n---\n\n## Standard response envelope\n\nEvery response wraps data in this shape:\n\n```json\n{ \"success\": true, \"message\": \"...\", \"data\": { ... } }\n```\n\nPaginated lists add a `meta` key:\n```json\n{ \"success\": true, \"data\": [...], \"meta\": { \"current_page\": 1, \"per_page\": 20, \"total\": 84, \"last_page\": 5 } }\n```\n\nErrors:\n```json\n{ \"success\": false, \"message\": \"Human-readable message.\" }\n```\n\nValidation errors (422):\n```json\n{ \"success\": false, \"message\": \"Validation failed.\", \"errors\": { \"field\": [\"reason\"] } }\n```\n\n---\n\n## Role system\n\nAll data queries are scoped **automatically** by the backend based on the token's role. You don't pass a role param — the backend reads it from the token.\n\n| Role | What they can query |\n|---|---|\n| `superadmin` | All patients across all hospitals |\n| `admin` | All patients + staff within their hospital |\n| `doctor` | Only patients where they are the assigned doctor |\n| `staff` | Same patient scope as admin but cannot create/edit |\n\n### Write restrictions (backend returns 403 for these)\n\n| Action | doctor | admin | staff | superadmin |\n|---|---|---|---|---|\n| POST /patients/{id}/notes | ✅ | ✅ | ❌ | ✅ |\n| POST/DELETE /appointments | ✅ | ✅ | ❌ | ✅ |\n| PUT /alerts/{id}/assign | ✅ | ✅ | ❌ | ✅ |\n| PUT /alerts/{id}/resolve | ✅ | ✅ | ✅ | ✅ |\n| PATCH /staff/{id}/approve | ❌ | ✅ | ❌ | ✅ |\n| POST /patients | ❌ | ✅ | ❌ | ✅ |\n\n---\n\n## Approval flow\n\nDoctors and staff must be approved before they can use the API:\n\n1. `POST /auth/register` with `role: \"doctor\"` or `role: \"staff\"`\n2. Response has `approval_status: \"pending\"` — the token is issued but all protected routes return **403 Account pending approval**\n3. An admin calls `PATCH /staff/{id}/approve` with `action: \"approve\"`\n4. The doctor/staff can now access all protected routes\n\n---\n\n## Key field reference\n\n### healthScore\nDerived from each patient's personal 28-day vital baseline. Never population-compared.\n\n| Value | Status | Colour |\n|---|---|---|\n| `85` | Stable | Green |\n| `65` | Watch | Yellow |\n| `45` | Elevated | Orange |\n| `20` | Urgent | Red |\n| `null` | Calibrating — less than 28 days of data | Grey |\n\n### alertLevel\nHighest-priority **pending** alert on the patient. Resolved alerts do not affect this.\n\n| Value | Meaning | Colour |\n|---|---|---|\n| `\"L1\"` | Critical alert pending | Red |\n| `\"L2\"` | Warning alert pending | Amber |\n| `\"L3\"` | No pending alerts | Green |\n\n### displayId\nHuman-readable ID shown in the UI: `SCW-001`, `SCW-042`, etc. Always display this instead of the numeric `id`. Use numeric `id` only in URL path params.",
         "contact": {
             "email": "hello@statra.health"
         },
@@ -641,6 +641,7 @@
                     "Patients"
                 ],
                 "summary": "List patients (role-scoped)",
+                "description": "Returns paginated patient cards. The backend scopes results by your role automatically — you do not pass a role param. Each card includes `healthScore` (number or null), `alertLevel` (L1/L2/L3 string), and `displayId` (SCW-XXX). Show `displayId` in the UI, use numeric `id` in API calls.",
                 "operationId": "647a0febe8d8e9dfcb7897bcbd4bd4a2",
                 "parameters": [
                     {
@@ -992,7 +993,7 @@
                     "Patients"
                 ],
                 "summary": "Patient vitals snapshot",
-                "description": "Returns the latest reading per vital type plus a time-series for the requested range.",
+                "description": "Returns a **typed snapshot object** — NOT a flat array.\n\nEach key is a vital type. Access data like:\n- Latest value: `heartRate.current`\n- Unit: `heartRate.unit`\n- For charts: `heartRate.series` (array, newest first, max 100 points)\n\nIf no reading exists in the range, `current` is null and `series` is empty.\n\nAvailable keys: `heartRate`, `spo2`, `temperature`, `hrv`, `steps`, `sleepState`",
                 "operationId": "dc041b2df39131031b74e47569e708a1",
                 "parameters": [
                     {
@@ -1263,6 +1264,7 @@
                     "Alerts"
                 ],
                 "summary": "List alerts (role-scoped)",
+                "description": "Alert `level` is returned as a string: `\"L1\"` (critical) or `\"L2\"` (warning). The raw integer (1 or 2) is in `rawLevel` if needed for query params. Filter by `?level=1` (integer) but read back `\"L1\"` (string).",
                 "operationId": "f517399961d4e8021a119c70ccc35794",
                 "parameters": [
                     {
@@ -2575,31 +2577,31 @@
     "tags": [
         {
             "name": "Auth",
-            "description": "Register, login, profile, password reset"
+            "description": "**Start here.** Use POST /auth/login to get a token, then click Authorize at the top of the page."
         },
         {
             "name": "Dashboard",
-            "description": "Summary stats, alert feed, weekly trend"
+            "description": "Summary stats for the dashboard home page. All counts are scoped by your role automatically."
         },
         {
             "name": "Patients",
-            "description": "Patient list, detail, vitals, alerts, medications, notes"
+            "description": "Patient list, detail, vitals snapshot, medications, and medical notes. Vitals return a typed object — not a flat array."
         },
         {
             "name": "Alerts",
-            "description": "Alert management — list, resolve, assign"
+            "description": "Alert feed and management. Levels are returned as L1/L2/L3 strings, not integers."
         },
         {
             "name": "Appointments",
-            "description": "Appointment scheduling"
+            "description": "Appointment scheduling. Includes a `type` free-text field. Staff role cannot create or delete."
         },
         {
             "name": "Staff",
-            "description": "Staff listing and approval (admin/superadmin only)"
+            "description": "**Admin and superadmin only.** Lists doctors/staff and handles the approve/reject flow for pending accounts."
         },
         {
             "name": "Reports",
-            "description": "Aggregated health data and CSV export"
+            "description": "Aggregated data for reports page. Last endpoint exports a CSV file."
         }
     ]
 }
