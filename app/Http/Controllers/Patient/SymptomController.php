@@ -218,7 +218,7 @@ class SymptomController extends Controller
         $paginator = $patient->symptoms()
             ->tap($applyFilters)
             ->orderByDesc('logged_at')
-            ->select(['id', 'symptom', 'severity', 'severity_label', 'body_locations', 'pain_areas', 'mood', 'notes', 'logged_at'])
+            ->select(['id', 'symptom', 'severity', 'severity_label', 'body_locations', 'pain_areas', 'triggers', 'mood', 'notes', 'logged_at'])
             ->paginate($perPage);
 
         return ApiResponse::success([

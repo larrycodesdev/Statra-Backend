@@ -91,7 +91,7 @@ class HealthTrackerController extends Controller
         $symptoms = $patient->symptoms()
             ->orderByDesc('logged_at')
             ->limit($limit)
-            ->get(['id', 'symptom', 'severity', 'severity_label', 'mood', 'logged_at']);
+            ->get(['id', 'symptom', 'severity', 'severity_label', 'triggers', 'mood', 'logged_at']);
 
         return ApiResponse::success([
             'heart_rate'      => $heartRate,
