@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Appointment extends Model
 {
     protected $fillable = [
-        'patient_id', 'doctor_id', 'scheduled_at', 'status', 'notes',
+        'patient_id', 'doctor_id', 'scheduled_at', 'type', 'status', 'notes',
     ];
 
     protected function casts(): array

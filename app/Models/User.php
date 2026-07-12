@@ -20,6 +20,7 @@ class User extends Authenticatable
         'first_name', 'last_name', 'username',
         'email', 'password',
         'role', 'phone', 'avatar', 'fcm_token',
+        'hospital_id', 'approval_status',
         'password_reset_otp', 'password_reset_otp_expires_at',
     ];
 
@@ -73,13 +74,25 @@ class User extends Authenticatable
         return $this->hasMany(CheckIn::class);
     }
 
-    public function isPatient(): bool
+    public function hospital(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->role === 'patient';
+        return $this->belongsTo(Hospital::class);
     }
 
-    public function isDoctor(): bool
+    public function isPatient(): bool  { return $this->role === 'patient'; }
+    public function isDoctor(): bool   { return $this->role === 'doctor'; }
+    public function isAdmin(): bool    { return $this->role === 'admin'; }
+    public function isSuperAdmin(): bool { return $this->role === 'superadmin'; }
+    public function isStaff(): bool    { return $this->role === 'staff'; }
+    public function isApproved(): bool { return $this->approval_status === 'approved'; }
+
+    public function getInitialsAttribute(): string
     {
-        return $this->role === 'doctor';
+        $name = $this->full_name;
+        $parts = explode(' ', trim($name));
+        if (count($parts) >= 2) {
+            return strtoupper(substr($parts[0], 0, 1) . substr(end($parts), 0, 1));
+        }
+        return strtoupper(substr($name, 0, 2));
     }
 }

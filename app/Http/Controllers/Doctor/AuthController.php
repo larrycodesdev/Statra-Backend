@@ -14,41 +14,52 @@ use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class AuthController extends Controller
 {
+    private const STAFF_ROLES = ['doctor', 'admin', 'staff', 'superadmin'];
+
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'            => ['required', 'string', 'max:255'],
-            'email'           => ['required', 'email', 'unique:users,email'],
-            'password'        => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
-            'phone'           => ['nullable', 'string', 'max:20'],
-            'hospital_name'   => ['nullable', 'string', 'max:255'],
-            'department'      => ['nullable', 'string', 'max:255'],
-            'specialisation'  => ['nullable', 'string', 'max:255'],
-            'license_number'  => ['nullable', 'string', 'max:100', 'unique:doctors,license_number'],
+            'role'           => ['required', 'in:doctor,staff'],
+            'first_name'     => ['required', 'string', 'max:255'],
+            'last_name'      => ['required', 'string', 'max:255'],
+            'email'          => ['required', 'email', 'unique:users,email'],
+            'password'       => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
+            'phone'          => ['nullable', 'string', 'max:20'],
+            'hospital_id'    => ['nullable', 'exists:hospitals,id'],
+            // Doctor-specific
+            'department'     => ['nullable', 'string', 'max:255'],
+            'specialisation' => ['nullable', 'string', 'max:255'],
+            'license_number' => ['nullable', 'string', 'max:100', 'unique:doctors,license_number'],
         ]);
 
         $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role'     => 'doctor',
-            'phone'    => $data['phone'] ?? null,
+            'first_name'      => $data['first_name'],
+            'last_name'       => $data['last_name'],
+            'name'            => $data['first_name'] . ' ' . $data['last_name'],
+            'email'           => $data['email'],
+            'password'        => Hash::make($data['password']),
+            'role'            => $data['role'],
+            'phone'           => $data['phone'] ?? null,
+            'hospital_id'     => $data['hospital_id'] ?? null,
+            'approval_status' => 'pending',
         ]);
 
-        Doctor::create([
-            'user_id'        => $user->id,
-            'hospital_name'  => $data['hospital_name'] ?? null,
-            'department'     => $data['department'] ?? null,
-            'specialisation' => $data['specialisation'] ?? null,
-            'license_number' => $data['license_number'] ?? null,
-        ]);
+        if ($data['role'] === 'doctor') {
+            Doctor::create([
+                'user_id'        => $user->id,
+                'department'     => $data['department'] ?? null,
+                'specialisation' => $data['specialisation'] ?? null,
+                'license_number' => $data['license_number'] ?? null,
+            ]);
+        }
 
-        $token = $user->createToken('web-dashboard', ['doctor'])->plainTextToken;
+        $token = $user->createToken('web-dashboard', [$user->role])->plainTextToken;
 
         return ApiResponse::created([
-            'token' => $token,
-            'user'  => $this->userResource($user),
-        ], 'Doctor registration successful.');
+            'token'           => $token,
+            'user'            => $this->userResource($user),
+            'approval_status' => 'pending',
+        ], 'Registration successful. Account is pending admin approval.');
     }
 
     public function login(Request $request): JsonResponse
@@ -58,18 +69,41 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $data['email'])->where('role', 'doctor')->first();
+        $user = User::where('email', $data['email'])
+            ->whereIn('role', self::STAFF_ROLES)
+            ->first();
 
         if (!$user || !Hash::check($data['password'], $user->password)) {
             return ApiResponse::error('Invalid credentials.', 401);
         }
 
-        $token = $user->createToken('web-dashboard', ['doctor'])->plainTextToken;
+        $token = $user->createToken('web-dashboard', [$user->role])->plainTextToken;
 
         return ApiResponse::success([
-            'token' => $token,
-            'user'  => $this->userResource($user),
+            'token'           => $token,
+            'user'            => $this->userResource($user),
+            'approval_status' => $user->approval_status,
         ], 'Login successful.');
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return ApiResponse::success([
+            'id'        => $user->id,
+            'uuid'      => $user->uuid,
+            'fullName'  => $user->full_name,
+            'initials'  => $user->initials,
+            'email'     => $user->email,
+            'phone'     => $user->phone,
+            'avatar'    => $user->avatar,
+            'role'      => $user->role,
+            'hospital'  => $user->hospital ? [
+                'id'   => $user->hospital->id,
+                'name' => $user->hospital->name,
+            ] : null,
+        ]);
     }
 
     public function forgotPassword(Request $request): JsonResponse
@@ -111,12 +145,13 @@ class AuthController extends Controller
     private function userResource(User $user): array
     {
         return [
-            'id'    => $user->id,
-            'uuid'  => $user->uuid,
-            'name'  => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'role'  => $user->role,
+            'id'       => $user->id,
+            'uuid'     => $user->uuid,
+            'fullName' => $user->full_name,
+            'initials' => $user->initials,
+            'email'    => $user->email,
+            'phone'    => $user->phone,
+            'role'     => $user->role,
         ];
     }
 }

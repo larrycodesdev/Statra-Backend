@@ -10,6 +10,7 @@ class Patient extends Model
         'user_id', 'genotype', 'blood_type', 'date_of_birth',
         'gender', 'condition', 'assigned_doctor_id',
         'calibration_status', 'calibration_start_at', 'age_group',
+        'hospital_id', 'assigned_nurse_id', 'ward', 'admitted_at',
     ];
 
     protected function casts(): array
@@ -88,6 +89,16 @@ class Patient extends Model
     public function notifications(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(PatientNotification::class);
+    }
+
+    public function hospital(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Hospital::class);
+    }
+
+    public function assignedNurse(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_nurse_id');
     }
 
     public function baselines(): \Illuminate\Database\Eloquent\Relations\HasMany
