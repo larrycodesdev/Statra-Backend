@@ -36,6 +36,7 @@ class ProcessVitalBatch implements ShouldQueue
                 'value'            => $reading['value'],
                 'unit'             => $reading['unit'] ?? null,
                 'recorded_at'      => $reading['recorded_at'],
+                'received_at'      => now(),
                 'activity_context' => $reading['activity_context'] ?? null,
                 'quality_flag'     => $reading['quality_flag'] ?? 'good',
             ]);

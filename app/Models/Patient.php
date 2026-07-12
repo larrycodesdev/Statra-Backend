@@ -9,7 +9,7 @@ class Patient extends Model
     protected $fillable = [
         'user_id', 'genotype', 'blood_type', 'date_of_birth',
         'gender', 'condition', 'assigned_doctor_id',
-        'calibration_status', 'calibration_start_at',
+        'calibration_status', 'calibration_start_at', 'age_group',
     ];
 
     protected function casts(): array
