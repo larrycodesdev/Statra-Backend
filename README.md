@@ -24,7 +24,7 @@ Laravel 13 REST API powering the STATRA Health platform — a clinical monitorin
 | Database | Azure SQL Server (sqlsrv driver) |
 | Auth | Laravel Sanctum — token abilities per client |
 | Email | Resend (via Laravel Mail) |
-| Storage | AWS S3 via Flysystem |
+| Storage | AWS S3 via Cloudflare |
 | Cache / Queue | Redis (Predis) |
 | Social login | Laravel Socialite (Google) |
 | API Docs | L5-Swagger (OpenAPI 3) |
