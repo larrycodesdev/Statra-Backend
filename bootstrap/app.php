@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureIsDoctor;
 use App\Http\Middleware\EnsureIsPatient;
 use App\Http\Middleware\EnsureIsStaff;
+use App\Http\Middleware\EnsureIsSuperAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -44,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'patient'     => EnsureIsPatient::class,
             'doctor'      => EnsureIsDoctor::class,
             'staff'       => EnsureIsStaff::class,
+            'superadmin'  => EnsureIsSuperAdmin::class,
             'store.admin' => \App\Http\Middleware\StoreAdminToken::class,
 
             'ability'   => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,

@@ -135,6 +135,40 @@ class AuthController extends Controller
         return ApiResponse::success(null, 'Password reset successfully.');
     }
 
+    public function acceptInvite(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'token'    => ['required', 'string'],
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
+        ]);
+
+        $user = User::where('email', $data['email'])
+            ->whereNotNull('invite_token')
+            ->first();
+
+        if (
+            !$user ||
+            !hash_equals($user->invite_token, hash('sha256', $data['token'])) ||
+            now()->isAfter($user->invite_expires_at)
+        ) {
+            return ApiResponse::error('Invalid or expired invite link.', 400);
+        }
+
+        $user->update([
+            'password'          => Hash::make($data['password']),
+            'invite_token'      => null,
+            'invite_expires_at' => null,
+        ]);
+
+        $token = $user->createToken('web-dashboard', [$user->role])->plainTextToken;
+
+        return ApiResponse::success([
+            'token' => $token,
+            'user'  => $this->userResource($user),
+        ], 'Password set. You are now logged in.');
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();

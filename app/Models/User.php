@@ -21,6 +21,7 @@ class User extends Authenticatable
         'email', 'password',
         'role', 'phone', 'avatar', 'fcm_token',
         'hospital_id', 'approval_status',
+        'invite_token', 'invite_expires_at',
         'password_reset_otp', 'password_reset_otp_expires_at',
     ];
 
