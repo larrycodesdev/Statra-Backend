@@ -15,7 +15,7 @@ class ProfileController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $user    = $request->user()->load('patient.assignedDoctor.doctor', 'patient.emergencyContacts');
+        $user    = $request->user()->load('patient.assignedDoctor.doctor', 'patient.assignedNurse', 'patient.emergencyContacts');
         $patient = $user->patient;
 
         return ApiResponse::success([
@@ -49,7 +49,7 @@ class ProfileController extends Controller
             ])->values()->all(),
 
             // Care team
-            'care_team' => $this->careTeam($patient),
+            'care_team' => $this->buildCareTeam($patient),
         ]);
     }
 
@@ -121,7 +121,7 @@ class ProfileController extends Controller
     public function updateMedicalInfo(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'genotype'   => ['sometimes', 'in:SS,SC,SB,SD,SE,SO,other'],
+            'genotype'   => ['sometimes', 'in:SS,SC,SB+,SB0,SD,SE,SO,other'],
             'blood_type' => ['sometimes', 'nullable', 'string', 'max:10'],
             'condition'  => ['sometimes', 'nullable', 'array'],
             'condition.*' => ['string', 'max:100'],
@@ -168,23 +168,38 @@ class ProfileController extends Controller
         return ApiResponse::success(null, 'FCM token updated.');
     }
 
-    private function careTeam(\App\Models\Patient $patient): array
+    public function careTeam(Request $request): JsonResponse
     {
-        if (!$patient->assigned_doctor_id) {
-            return [];
+        $patient = $request->user()->patient->load('assignedDoctor.doctor', 'assignedNurse');
+        return ApiResponse::success($this->buildCareTeam($patient));
+    }
+
+    private function buildCareTeam(\App\Models\Patient $patient): array
+    {
+        $members = [];
+
+        if ($patient->assigned_doctor_id && $patient->assignedDoctor) {
+            $doctor    = $patient->assignedDoctor;
+            $members[] = [
+                'role'           => 'doctor',
+                'id'             => $doctor->id,
+                'name'           => $doctor->full_name,
+                'avatar'         => $doctor->avatar,
+                'specialisation' => $doctor->doctor?->specialisation,
+                'hospital'       => $doctor->doctor?->hospital_name,
+            ];
         }
 
-        $doctor = $patient->assignedDoctor;
-        if (!$doctor) {
-            return [];
+        if ($patient->assigned_nurse_id && $patient->assignedNurse) {
+            $nurse     = $patient->assignedNurse;
+            $members[] = [
+                'role'   => 'nurse',
+                'id'     => $nurse->id,
+                'name'   => $nurse->full_name,
+                'avatar' => $nurse->avatar,
+            ];
         }
 
-        return [[
-            'id'             => $doctor->id,
-            'name'           => $doctor->full_name,
-            'avatar'         => $doctor->avatar,
-            'specialisation' => $doctor->doctor?->specialisation,
-            'hospital'       => $doctor->doctor?->hospital_name,
-        ]];
+        return $members;
     }
 }

@@ -40,12 +40,13 @@ class SettingsController extends Controller
     private function settingsResource(\App\Models\PatientSettings $settings): array
     {
         return [
-            'allow_doctor_view_records' => $settings->allow_doctor_view_records,
-            'allow_doctor_view_data'    => $settings->allow_doctor_view_data,
-            'share_symptom_pain_data'   => $settings->share_symptom_pain_data,
-            'share_medication_records'  => $settings->share_medication_records,
-            'reminder_enabled'          => $settings->reminder_enabled,
-            'smart_alert_enabled'       => $settings->smart_alert_enabled,
+            'allow_doctor_view_records'  => $settings->allow_doctor_view_records,
+            'allow_doctor_view_data'     => $settings->allow_doctor_view_data,
+            'share_symptom_pain_data'    => $settings->share_symptom_pain_data,
+            'share_medication_records'   => $settings->share_medication_records,
+            'reminder_enabled'           => $settings->reminder_enabled,
+            'smart_alert_enabled'        => $settings->smart_alert_enabled,
+            'contact_support_enabled'    => true,
         ];
     }
 }

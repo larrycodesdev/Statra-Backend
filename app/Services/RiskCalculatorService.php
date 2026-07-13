@@ -16,6 +16,9 @@ class RiskCalculatorService
         'Confusion or weakness',
         'Severe chest pain',
         'Difficulty breathing',
+        // §8 v2.0 haematologist additions:
+        'Sudden left-sided abdominal pain',   // splenic sequestration — life-threatening in children
+        'Painful erection lasting over 2 hours', // priapism — medical emergency in SCD
     ];
 
     public function calculate(array $input): array

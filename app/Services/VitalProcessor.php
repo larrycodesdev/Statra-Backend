@@ -85,6 +85,7 @@ class VitalProcessor
                 ['field' => 'calories',  'type' => 'calories',    'unit' => 'kcal',  'at' => $ts,     'float' => true],
                 ['field' => 'spo2',      'type' => 'spo2',        'unit' => '%',     'at' => $spo2At, 'float' => false],
                 ['field' => 'stress',    'type' => 'stress',      'unit' => 'index', 'at' => $ts,     'float' => false],
+                ['field' => 'hrv',       'type' => 'hrv',         'unit' => 'ms',    'at' => $ts,     'float' => true],
             ];
 
             foreach ($scalars as $m) {

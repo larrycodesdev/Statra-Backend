@@ -40,6 +40,7 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     Route::post('profile/emergency-contacts',          [ProfileController::class, 'addEmergencyContact']);
     Route::delete('profile/emergency-contacts/{id}',   [ProfileController::class, 'removeEmergencyContact']);
     Route::put('profile/medical-info',             [ProfileController::class, 'updateMedicalInfo']);
+    Route::get('profile/care-team',                [ProfileController::class, 'careTeam']);
     Route::put('profile/fcm-token',                [ProfileController::class, 'updateFcmToken']);
     Route::post('profile/avatar',                  [ProfileController::class, 'uploadAvatar']);
 
