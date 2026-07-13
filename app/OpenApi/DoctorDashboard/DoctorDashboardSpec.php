@@ -66,6 +66,21 @@ All data queries are scoped **automatically** by the backend based on the token'
 | PUT /alerts/{id}/resolve | ✅ | ✅ | ✅ | ✅ |
 | PATCH /staff/{id}/approve | ❌ | ✅ | ❌ | ✅ |
 | POST /patients | ❌ | ✅ | ❌ | ✅ |
+| Superadmin /superadmin/* routes | ❌ | ❌ | ❌ | ✅ |
+
+---
+
+## Superadmin — hospital onboarding
+
+Superadmin is the product-owner role. It can see all data across all hospitals and is the only role that can create hospitals and their first admin.
+
+**Onboarding flow:**
+1. `POST /superadmin/hospitals` — create the hospital record
+2. `POST /superadmin/hospitals/{id}/admin` — create the first admin (name + email only). Backend sends an invite email with a set-password link (72h expiry).
+3. Admin clicks the link → hits `POST /auth/accept-invite` (public) → sets their password → receives a Sanctum token and is logged in.
+
+The invite link sent to the admin looks like:
+`https://dashboard.statra.health/auth/accept-invite?token=<token>&email=<email>`
 
 ---
 
@@ -927,4 +942,217 @@ MD,
         ]
     )]
     public function reportExport() {}
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUTH — ACCEPT INVITE (public)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[OA\Post(
+        path: '/api/v1/doctor/auth/accept-invite',
+        summary: 'Set password from hospital admin invite link',
+        description: 'Public endpoint. Called when a newly invited hospital admin clicks their invite email link. Validates the token, sets the password, and returns a Sanctum token — the admin is immediately logged in. Invite tokens expire after 72 hours.',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['token', 'email', 'password', 'password_confirmation'],
+            properties: [
+                new OA\Property(property: 'token',                 type: 'string',  example: 'abc123...'),
+                new OA\Property(property: 'email',                 type: 'string',  format: 'email', example: 'admin@luth.gov.ng'),
+                new OA\Property(property: 'password',              type: 'string',  example: 'Secure123!'),
+                new OA\Property(property: 'password_confirmation', type: 'string',  example: 'Secure123!'),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Password set, token returned', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'message', type: 'string',  example: 'Password set. You are now logged in.'),
+                new OA\Property(property: 'data',    type: 'object',  properties: [
+                    new OA\Property(property: 'token', type: 'string'),
+                    new OA\Property(property: 'user',  type: 'object', properties: [
+                        new OA\Property(property: 'id',       type: 'integer'),
+                        new OA\Property(property: 'fullName', type: 'string'),
+                        new OA\Property(property: 'email',    type: 'string'),
+                        new OA\Property(property: 'role',     type: 'string', example: 'admin'),
+                    ]),
+                ]),
+            ])),
+            new OA\Response(response: 400, description: 'Invalid or expired invite token'),
+        ]
+    )]
+    public function acceptInvite() {}
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SUPERADMIN — HOSPITALS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[OA\Get(
+        path: '/api/v1/doctor/superadmin/hospitals',
+        summary: 'List all hospitals',
+        description: 'Returns every hospital with patient and staff counts. Superadmin only.',
+        tags: ['Superadmin'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Hospital list', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'data', type: 'array', items: new OA\Items(properties: [
+                    new OA\Property(property: 'id',           type: 'integer', example: 1),
+                    new OA\Property(property: 'name',         type: 'string',  example: 'Lagos University Teaching Hospital'),
+                    new OA\Property(property: 'city',         type: 'string',  example: 'Lagos'),
+                    new OA\Property(property: 'country',      type: 'string',  example: 'Nigeria'),
+                    new OA\Property(property: 'contactEmail', type: 'string',  example: 'admin@luth.gov.ng'),
+                    new OA\Property(property: 'contactPhone', type: 'string',  example: '+2348012345678'),
+                    new OA\Property(property: 'isActive',     type: 'boolean', example: true),
+                    new OA\Property(property: 'stats', type: 'object', properties: [
+                        new OA\Property(property: 'totalPatients', type: 'integer', example: 150),
+                        new OA\Property(property: 'totalStaff',    type: 'integer', example: 12),
+                    ]),
+                    new OA\Property(property: 'createdAt', type: 'string', format: 'date-time'),
+                ])),
+            ])),
+            new OA\Response(response: 403, description: 'Superadmin only'),
+        ]
+    )]
+    public function hospitalsIndex() {}
+
+    #[OA\Post(
+        path: '/api/v1/doctor/superadmin/hospitals',
+        summary: 'Create a hospital',
+        description: 'Creates a new hospital record. After creating, use POST /superadmin/hospitals/{id}/admin to add the first admin. Superadmin only.',
+        tags: ['Superadmin'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['name'],
+            properties: [
+                new OA\Property(property: 'name',          type: 'string', example: 'Lagos University Teaching Hospital'),
+                new OA\Property(property: 'address',       type: 'string', example: '1 Idi-Araba, Surulere', nullable: true),
+                new OA\Property(property: 'city',          type: 'string', example: 'Lagos', nullable: true),
+                new OA\Property(property: 'country',       type: 'string', example: 'Nigeria', nullable: true),
+                new OA\Property(property: 'contact_email', type: 'string', format: 'email', example: 'admin@luth.gov.ng', nullable: true),
+                new OA\Property(property: 'contact_phone', type: 'string', example: '+2348012345678', nullable: true),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 201, description: 'Hospital created', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Validation failed — name must be unique'),
+            new OA\Response(response: 403, description: 'Superadmin only'),
+        ]
+    )]
+    public function hospitalsStore() {}
+
+    #[OA\Get(
+        path: '/api/v1/doctor/superadmin/hospitals/{id}',
+        summary: 'Get hospital detail',
+        description: 'Returns hospital info plus a list of all admin accounts linked to it. Superadmin only.',
+        tags: ['Superadmin'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Hospital detail + admins', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'data', type: 'object', properties: [
+                    new OA\Property(property: 'id',       type: 'integer'),
+                    new OA\Property(property: 'name',     type: 'string'),
+                    new OA\Property(property: 'isActive', type: 'boolean'),
+                    new OA\Property(property: 'stats',    type: 'object'),
+                    new OA\Property(property: 'admins', type: 'array', items: new OA\Items(properties: [
+                        new OA\Property(property: 'id',             type: 'integer'),
+                        new OA\Property(property: 'name',           type: 'string'),
+                        new OA\Property(property: 'email',          type: 'string'),
+                        new OA\Property(property: 'approvalStatus', type: 'string', example: 'approved'),
+                        new OA\Property(property: 'createdAt',      type: 'string', format: 'date-time'),
+                    ])),
+                ]),
+            ])),
+            new OA\Response(response: 404, description: 'Hospital not found'),
+        ]
+    )]
+    public function hospitalsShow() {}
+
+    #[OA\Put(
+        path: '/api/v1/doctor/superadmin/hospitals/{id}',
+        summary: 'Update hospital info',
+        tags: ['Superadmin'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'name',          type: 'string', nullable: true),
+            new OA\Property(property: 'address',       type: 'string', nullable: true),
+            new OA\Property(property: 'city',          type: 'string', nullable: true),
+            new OA\Property(property: 'country',       type: 'string', nullable: true),
+            new OA\Property(property: 'contact_email', type: 'string', nullable: true),
+            new OA\Property(property: 'contact_phone', type: 'string', nullable: true),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Hospital updated', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Hospital not found'),
+        ]
+    )]
+    public function hospitalsUpdate() {}
+
+    #[OA\Patch(
+        path: '/api/v1/doctor/superadmin/hospitals/{id}/toggle',
+        summary: 'Activate or deactivate a hospital',
+        description: 'Toggles `isActive`. Superadmin only.',
+        tags: ['Superadmin'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Toggle applied', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'message', type: 'string',  example: 'Hospital deactivated.'),
+                new OA\Property(property: 'data',    type: 'object',  properties: [
+                    new OA\Property(property: 'isActive', type: 'boolean', example: false),
+                ]),
+            ])),
+            new OA\Response(response: 404, description: 'Hospital not found'),
+        ]
+    )]
+    public function hospitalsToggle() {}
+
+    #[OA\Post(
+        path: '/api/v1/doctor/superadmin/hospitals/{id}/admin',
+        summary: 'Create the first admin for a hospital',
+        description: <<<'MD'
+Creates an admin user linked to the hospital and sends them an invite email with a set-password link (72h expiry).
+
+The admin clicks the link → hits `POST /auth/accept-invite` → sets their password → is immediately logged in.
+
+If the invite expires, delete the user and re-run this endpoint. Superadmin only.
+MD,
+        tags: ['Superadmin'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'Hospital ID'),
+        ],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['first_name', 'last_name', 'email'],
+            properties: [
+                new OA\Property(property: 'first_name', type: 'string', example: 'Amaka'),
+                new OA\Property(property: 'last_name',  type: 'string', example: 'Osei'),
+                new OA\Property(property: 'email',      type: 'string', format: 'email', example: 'amaka.osei@luth.gov.ng'),
+                new OA\Property(property: 'phone',      type: 'string', example: '+2348012345678', nullable: true),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 201, description: 'Admin created, invite email sent', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'message', type: 'string',  example: 'Admin created and invite sent.'),
+                new OA\Property(property: 'data',    type: 'object',  properties: [
+                    new OA\Property(property: 'id',         type: 'integer', example: 42),
+                    new OA\Property(property: 'name',       type: 'string',  example: 'Amaka Osei'),
+                    new OA\Property(property: 'email',      type: 'string',  example: 'amaka.osei@luth.gov.ng'),
+                    new OA\Property(property: 'hospitalId', type: 'integer', example: 1),
+                    new OA\Property(property: 'inviteSent', type: 'boolean', example: true),
+                ]),
+            ])),
+            new OA\Response(response: 404, description: 'Hospital not found'),
+            new OA\Response(response: 422, description: 'Validation failed — email already in use'),
+        ]
+    )]
+    public function hospitalsCreateAdmin() {}
 }
