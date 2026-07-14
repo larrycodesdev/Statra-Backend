@@ -20,6 +20,7 @@ class DevPatientSeeder extends Seeder
                 'first_name' => 'Amara',
                 'last_name'  => 'Nwosu',
                 'name'       => 'Amara Nwosu',
+                'username'   => 'amara.nwosu.dev',
                 'role'       => 'patient',
                 'password'   => 'Statra@test@2026',
                 'approval_status' => 'approved',

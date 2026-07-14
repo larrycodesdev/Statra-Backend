@@ -19,10 +19,10 @@ return new class extends Migration
                 composite_score_id BIGINT        NULL,
 
                 CONSTRAINT fk_deviation_scores_patient
-                    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+                    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE NO ACTION,
 
                 CONSTRAINT fk_deviation_scores_composite
-                    FOREIGN KEY (composite_score_id) REFERENCES composite_deviation_scores(id) ON DELETE SET NULL,
+                    FOREIGN KEY (composite_score_id) REFERENCES composite_deviation_scores(id) ON DELETE NO ACTION,
 
                 CONSTRAINT chk_deviation_signal_type
                     CHECK (signal_type IN ('temperature','spo2','heart_rate','hrv','steps')),
