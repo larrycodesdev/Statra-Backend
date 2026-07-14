@@ -14,11 +14,11 @@ return new class extends Migration
 
         DB::statement("
             ALTER TABLE patients ADD CONSTRAINT patients_hospital_id_foreign
-            FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE SET NULL
+            FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE NO ACTION
         ");
         DB::statement("
             ALTER TABLE patients ADD CONSTRAINT patients_assigned_nurse_id_foreign
-            FOREIGN KEY (assigned_nurse_id) REFERENCES users(id) ON DELETE SET NULL
+            FOREIGN KEY (assigned_nurse_id) REFERENCES users(id) ON DELETE NO ACTION
         ");
     }
 
