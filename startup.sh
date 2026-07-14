@@ -18,6 +18,7 @@ php artisan config:clear
 php artisan config:cache
 php artisan route:clear
 php artisan migrate --force
+php artisan db:seed --class=SuperAdminSeeder --force
 
 # Run the Laravel scheduler and queue worker as background processes
 php artisan schedule:work >> /home/site/wwwroot/storage/logs/scheduler.log 2>&1 &
