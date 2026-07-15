@@ -11,6 +11,7 @@ use App\Models\Symptom;
 use App\Models\User;
 use App\Models\VitalReading;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DevPatientSeeder extends Seeder
 {
@@ -20,6 +21,7 @@ class DevPatientSeeder extends Seeder
         $user = User::firstOrCreate(
             ['email' => 'testpatient@statrahealth.com'],
             [
+                'uuid'            => Str::uuid()->toString(),
                 'first_name'      => 'Amara',
                 'last_name'       => 'Nwosu',
                 'name'            => 'Amara Nwosu',

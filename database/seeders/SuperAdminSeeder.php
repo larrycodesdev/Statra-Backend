@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class SuperAdminSeeder extends Seeder
 {
@@ -12,8 +13,11 @@ class SuperAdminSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'superadmin@statrahealth.com'],
             [
+                'uuid'            => Str::uuid()->toString(),
                 'first_name'      => 'Super',
                 'last_name'       => 'Admin',
+                'name'            => 'Super Admin',
+                'username'        => 'superadmin',
                 'role'            => 'superadmin',
                 'password'        => 'Statra@super@2026',
                 'approval_status' => 'approved',
