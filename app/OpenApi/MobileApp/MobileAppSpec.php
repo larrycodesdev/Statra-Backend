@@ -348,9 +348,47 @@ class MobileAppSpec
 
     // ── PATIENT ALERTS + LOGS ─────────────────────────────────────────────────
 
-    #[OA\Get(path: '/api/v1/patient/alerts', summary: 'Get alerts for this patient', security: [['bearerAuth' => []]], tags: ['Patient Alerts'])]
-    #[OA\Parameter(name: 'status', in: 'query', schema: new OA\Schema(type: 'string', enum: ['pending', 'acknowledged', 'resolved']))]
-    #[OA\Response(response: 200, description: 'Alert list', content: new OA\JsonContent(ref: '#/components/schemas/PaginatedResponse'))]
+    #[OA\Get(
+        path: '/api/v1/patient/alerts',
+        summary: 'Get alerts, smart insights, and notifications',
+        description: 'Returns alerts, smart insights, and the latest 20 notifications (unread first) in a single call. Use `unread_count` for the notification badge.',
+        tags: ['Patient Alerts'],
+        security: [['bearerAuth' => []]],
+    )]
+    #[OA\Parameter(name: 'filter', in: 'query', description: 'all | active | smart', schema: new OA\Schema(type: 'string', enum: ['all', 'active', 'smart'], default: 'all'))]
+    #[OA\Response(response: 200, description: 'Alerts + notifications', content: new OA\JsonContent(properties: [
+        new OA\Property(property: 'success', type: 'boolean', example: true),
+        new OA\Property(property: 'data', type: 'object', properties: [
+            new OA\Property(property: 'smart_insights', type: 'array', items: new OA\Items(properties: [
+                new OA\Property(property: 'type',    type: 'string', enum: ['pattern', 'weekly', 'trigger_warning']),
+                new OA\Property(property: 'title',   type: 'string', example: 'Pattern Detected'),
+                new OA\Property(property: 'message', type: 'string', example: 'High Stress trigger frequency detected.'),
+                new OA\Property(property: 'tag',     type: 'string', example: 'Pattern'),
+            ])),
+            new OA\Property(property: 'alerts', type: 'array', items: new OA\Items(properties: [
+                new OA\Property(property: 'id',      type: 'integer', example: 1),
+                new OA\Property(property: 'type',    type: 'string',  example: 'temperature_high'),
+                new OA\Property(property: 'level',   type: 'integer', example: 1),
+                new OA\Property(property: 'message', type: 'string',  example: 'Temperature is 38.7°C — fever ≥38.5°C.'),
+                new OA\Property(property: 'status',  type: 'string',  enum: ['pending', 'acknowledged', 'resolved']),
+            ])),
+            new OA\Property(property: 'notifications', type: 'array', description: 'Latest 20 notifications, unread first', items: new OA\Items(properties: [
+                new OA\Property(property: 'id',         type: 'integer', example: 5),
+                new OA\Property(property: 'type',       type: 'string',  example: 'alert'),
+                new OA\Property(property: 'title',      type: 'string',  example: 'High temperature detected'),
+                new OA\Property(property: 'body',       type: 'string',  example: 'Your temperature reading of 38.7°C has triggered an alert.'),
+                new OA\Property(property: 'data',       type: 'object'),
+                new OA\Property(property: 'read_at',    type: 'string',  format: 'date-time', nullable: true),
+                new OA\Property(property: 'created_at', type: 'string',  format: 'date-time'),
+            ])),
+            new OA\Property(property: 'unread_count', type: 'integer', description: 'Total unread notification count — use for badge', example: 3),
+            new OA\Property(property: 'meta', type: 'object', properties: [
+                new OA\Property(property: 'total',        type: 'integer', example: 10),
+                new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                new OA\Property(property: 'last_page',    type: 'integer', example: 1),
+            ]),
+        ]),
+    ]))]
     public function patientAlerts() {}
 
     #[OA\Post(path: '/api/v1/patient/pain-log', summary: 'Log a pain episode', security: [['bearerAuth' => []]], tags: ['Patient Logs'])]

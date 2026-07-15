@@ -25,9 +25,22 @@ class AlertController extends Controller
         $alerts        = $alertsQuery->paginate(20);
         $smartInsights = in_array($filter, ['all', 'smart']) ? $this->smartInsights($patient) : [];
 
+        $notifications = [];
+        $unreadCount   = 0;
+
+        if ($filter === 'all') {
+            $notifications = $patient->notifications()
+                ->orderByRaw('CASE WHEN read_at IS NULL THEN 0 ELSE 1 END, created_at DESC')
+                ->limit(20)
+                ->get();
+            $unreadCount = $patient->notifications()->whereNull('read_at')->count();
+        }
+
         return ApiResponse::success([
             'smart_insights' => $smartInsights,
             'alerts'         => $alerts->items(),
+            'notifications'  => $notifications,
+            'unread_count'   => $unreadCount,
             'meta'           => [
                 'total'        => $alerts->total(),
                 'current_page' => $alerts->currentPage(),
