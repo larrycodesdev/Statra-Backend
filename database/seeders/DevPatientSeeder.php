@@ -3,8 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\Alert;
+use App\Models\Medication;
+use App\Models\MedicationLog;
 use App\Models\Patient;
 use App\Models\PatientNotification;
+use App\Models\Symptom;
 use App\Models\User;
 use App\Models\VitalReading;
 use Illuminate\Database\Seeder;
@@ -13,16 +16,16 @@ class DevPatientSeeder extends Seeder
 {
     public function run(): void
     {
-        // ── Test patient user ────────────────────────────────────────────────
+        // ── User + patient ───────────────────────────────────────────────────
         $user = User::firstOrCreate(
             ['email' => 'testpatient@statrahealth.com'],
             [
-                'first_name' => 'Amara',
-                'last_name'  => 'Nwosu',
-                'name'       => 'Amara Nwosu',
-                'username'   => 'amara.nwosu.dev',
-                'role'       => 'patient',
-                'password'   => 'Statra@test@2026',
+                'first_name'      => 'Amara',
+                'last_name'       => 'Nwosu',
+                'name'            => 'Amara Nwosu',
+                'username'        => 'amara.nwosu.dev',
+                'role'            => 'patient',
+                'password'        => 'Statra@test@2026',
                 'approval_status' => 'approved',
             ]
         );
@@ -30,14 +33,20 @@ class DevPatientSeeder extends Seeder
         $patient = Patient::firstOrCreate(
             ['user_id' => $user->id],
             [
-                'genotype'       => 'SS',
-                'blood_type'     => 'O+',
-                'date_of_birth'  => '1998-03-14',
-                'gender'         => 'female',
-                'age_group'      => 'adult',
+                'genotype'           => 'SS',
+                'blood_type'         => 'O+',
+                'date_of_birth'      => '1998-03-14',
+                'gender'             => 'female',
+                'age_group'          => 'adult',
                 'calibration_status' => 'calibrating',
             ]
         );
+
+        // Guard — skip data seeding if already done
+        if ($patient->alerts()->exists()) {
+            $this->command->info('Dev patient already seeded — skipping.');
+            return;
+        }
 
         // ── Vital readings ───────────────────────────────────────────────────
         $tempReading = VitalReading::create([
@@ -62,14 +71,13 @@ class DevPatientSeeder extends Seeder
             'quality_flag'     => 'good',
         ]);
 
-        // Healthy readings for context
         foreach ([
-            ['type' => 'heart_rate',  'value' => 78,   'unit' => 'bpm',   'activity_context' => 'resting'],
-            ['type' => 'heart_rate',  'value' => 112,  'unit' => 'bpm',   'activity_context' => 'active'],
-            ['type' => 'hrv',         'value' => 42.5, 'unit' => 'ms',    'activity_context' => 'resting'],
-            ['type' => 'steps',       'value' => 3200, 'unit' => 'steps', 'activity_context' => 'active'],
-            ['type' => 'temperature', 'value' => 36.8, 'unit' => '°C',    'activity_context' => 'resting'],
-            ['type' => 'spo2',        'value' => 97,   'unit' => '%',     'activity_context' => 'resting'],
+            ['type' => 'heart_rate',  'value' => 78,   'unit' => 'bpm',   'ctx' => 'resting'],
+            ['type' => 'heart_rate',  'value' => 112,  'unit' => 'bpm',   'ctx' => 'active'],
+            ['type' => 'hrv',         'value' => 42.5, 'unit' => 'ms',    'ctx' => 'resting'],
+            ['type' => 'steps',       'value' => 3200, 'unit' => 'steps', 'ctx' => 'active'],
+            ['type' => 'temperature', 'value' => 36.8, 'unit' => '°C',    'ctx' => 'resting'],
+            ['type' => 'spo2',        'value' => 97,   'unit' => '%',     'ctx' => 'resting'],
         ] as $i => $r) {
             VitalReading::create([
                 'patient_id'       => $patient->id,
@@ -78,8 +86,49 @@ class DevPatientSeeder extends Seeder
                 'unit'             => $r['unit'],
                 'recorded_at'      => now()->subDays(1)->subMinutes($i * 30),
                 'received_at'      => now()->subDays(1)->subMinutes($i * 30),
-                'activity_context' => $r['activity_context'],
+                'activity_context' => $r['ctx'],
                 'quality_flag'     => 'good',
+            ]);
+        }
+
+        // ── Symptoms with triggers — fires smart insight pattern detection ───
+        // Need ≥3 occurrences of same trigger in last 30 days
+        foreach (range(1, 4) as $i) {
+            Symptom::create([
+                'patient_id'     => $patient->id,
+                'symptom'        => 'Fatigue',
+                'severity'       => 6,
+                'severity_label' => 'moderate',
+                'pain_level'     => 5,
+                'triggers'       => ['Stress', 'Poor sleep'],
+                'mood'           => 'Low',
+                'logged_at'      => now()->subDays($i * 3),
+            ]);
+        }
+
+        // ── Medication + logs — fires smart insight weekly summary ───────────
+        $medication = Medication::create([
+            'patient_id'      => $patient->id,
+            'name'            => 'Voxelotor',
+            'dosage'          => '1500mg',
+            'time_to_use'     => 'morning',
+            'frequency'       => 'daily',
+            'frequency_count' => 1,
+            'begin_date'      => now()->subDays(14)->toDateString(),
+            'remind_me'       => true,
+            'active'          => true,
+        ]);
+
+        // 6 taken, 1 missed this week — gives 86% adherence
+        foreach (range(6, 0) as $daysAgo) {
+            MedicationLog::create([
+                'patient_id'       => $patient->id,
+                'medication_id'    => $medication->id,
+                'medication_name'  => 'Voxelotor',
+                'dosage'           => '1500mg',
+                'scheduled_at'     => now()->subDays($daysAgo)->setTime(8, 0),
+                'taken_at'         => $daysAgo === 2 ? null : now()->subDays($daysAgo)->setTime(8, 15),
+                'status'           => $daysAgo === 2 ? 'missed' : 'taken',
             ]);
         }
 
@@ -102,7 +151,7 @@ class DevPatientSeeder extends Seeder
             'status'           => 'acknowledged',
         ]);
 
-        // ── Notifications ─────────────────────────────────────────────────────
+        // ── Notifications ────────────────────────────────────────────────────
         PatientNotification::create([
             'patient_id' => $patient->id,
             'type'       => 'alert',
@@ -116,8 +165,8 @@ class DevPatientSeeder extends Seeder
             'patient_id' => $patient->id,
             'type'       => 'medication_reminder',
             'title'      => 'Medication due',
-            'body'       => 'Voxelotor 1500mg is due at 11:00am.',
-            'data'       => ['medication_id' => 5, 'scheduled_at' => now()->setTime(11, 0)->toDateTimeString()],
+            'body'       => 'Voxelotor 1500mg is due at 8:00am.',
+            'data'       => ['medication_id' => $medication->id, 'scheduled_at' => now()->setTime(8, 0)->toDateTimeString()],
             'read_at'    => now()->subMinutes(5),
         ]);
 
@@ -130,6 +179,6 @@ class DevPatientSeeder extends Seeder
             'read_at'    => now()->subMinutes(30),
         ]);
 
-        $this->command->info("Dev patient seeded — email: testpatient@statrahealth.com / password: Statra@test@2026");
+        $this->command->info('Dev patient seeded — email: testpatient@statrahealth.com / password: Statra@test@2026');
     }
 }
