@@ -243,6 +243,29 @@ class MobileAppSpec
     #[OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse'))]
     public function patientUpdateEmergency() {}
 
+    #[OA\Get(
+        path: '/api/v1/patient/profile/care-team',
+        summary: 'Get assigned care team',
+        description: 'Returns the assigned doctor and nurse for this patient. Either field may be null if not yet assigned.',
+        tags: ['Patient Profile'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Care team', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'data', type: 'object', properties: [
+                    new OA\Property(property: 'care_team', type: 'array', items: new OA\Items(properties: [
+                        new OA\Property(property: 'id',         type: 'integer', example: 7),
+                        new OA\Property(property: 'name',       type: 'string',  example: 'Dr. Emeka Okafor'),
+                        new OA\Property(property: 'role',       type: 'string',  enum: ['doctor', 'nurse'], example: 'doctor'),
+                        new OA\Property(property: 'speciality', type: 'string',  example: 'Haematology', nullable: true),
+                        new OA\Property(property: 'avatar',     type: 'string',  example: 'https://...', nullable: true),
+                    ])),
+                ]),
+            ])),
+        ]
+    )]
+    public function patientCareTeam() {}
+
     #[OA\Put(path: '/api/v1/patient/profile/fcm-token', summary: 'Refresh FCM push token — call on every app launch', security: [['bearerAuth' => []]], tags: ['Patient Profile'])]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(
         required: ['fcm_token'],
