@@ -133,6 +133,7 @@ MD,
 #[OA\Tag(name: 'Appointments', description: 'Appointment scheduling. Includes a `type` free-text field. Staff role cannot create or delete.')]
 #[OA\Tag(name: 'Staff',        description: '**Admin and superadmin only.** Lists doctors/staff and handles the approve/reject flow for pending accounts.')]
 #[OA\Tag(name: 'Reports',      description: 'Aggregated data for reports page. Last endpoint exports a CSV file.')]
+#[OA\Tag(name: 'Superadmin',   description: '**Superadmin only.** Hospital management — create hospitals, invite first admin, activate/deactivate. All routes are prefixed `/superadmin/`.')]
 
 class DoctorDashboardSpec
 {
@@ -927,6 +928,32 @@ MD,
         ]
     )]
     public function reportHealthTrends() {}
+
+    #[OA\Get(
+        path: '/api/v1/doctor/reports/alerts-analytics',
+        summary: 'Alert counts by type, level, and status',
+        description: 'Returns a flat analytics summary for the current role scope — total, critical, warnings, pending, resolved, last 7 days, and a breakdown by alert type.',
+        tags: ['Reports'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Analytics summary', content: new OA\JsonContent(
+                type: 'object', properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', type: 'object', properties: [
+                        new OA\Property(property: 'total',       type: 'integer', example: 120),
+                        new OA\Property(property: 'critical',    type: 'integer', example: 12, description: 'Alerts with level=1'),
+                        new OA\Property(property: 'warnings',    type: 'integer', example: 38, description: 'Alerts with level=2'),
+                        new OA\Property(property: 'pending',     type: 'integer', example: 25),
+                        new OA\Property(property: 'resolved',    type: 'integer', example: 95),
+                        new OA\Property(property: 'last_7_days', type: 'integer', example: 18),
+                        new OA\Property(property: 'by_type',     type: 'object',  example: ['fever' => 14, 'hypoxia' => 8, 'tachycardia' => 5],
+                            description: 'Object keyed by alert type with count as value'),
+                    ]),
+                ]
+            )),
+        ]
+    )]
+    public function reportAlertsAnalytics() {}
 
     #[OA\Get(
         path: '/api/v1/doctor/reports/export',

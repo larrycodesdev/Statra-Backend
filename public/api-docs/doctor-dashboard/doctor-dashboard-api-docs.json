@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "STATRA — Doctor Dashboard API",
-        "description": "REST API for the STATRA Doctor Dashboard web app.\n\n---\n\n## How to use this docs\n\n1. Click **Authorize** (top right) and paste your Bearer token.\n2. All endpoints auto-include the token after that.\n3. To get a token: expand **Auth → POST /auth/login**, click **Try it out**, fill the body, hit **Execute**.\n\n---\n\n## Standard response envelope\n\nEvery response wraps data in this shape:\n\n```json\n{ \"success\": true, \"message\": \"...\", \"data\": { ... } }\n```\n\nPaginated lists add a `meta` key:\n```json\n{ \"success\": true, \"data\": [...], \"meta\": { \"current_page\": 1, \"per_page\": 20, \"total\": 84, \"last_page\": 5 } }\n```\n\nErrors:\n```json\n{ \"success\": false, \"message\": \"Human-readable message.\" }\n```\n\nValidation errors (422):\n```json\n{ \"success\": false, \"message\": \"Validation failed.\", \"errors\": { \"field\": [\"reason\"] } }\n```\n\n---\n\n## Role system\n\nAll data queries are scoped **automatically** by the backend based on the token's role. You don't pass a role param — the backend reads it from the token.\n\n| Role | What they can query |\n|---|---|\n| `superadmin` | All patients across all hospitals |\n| `admin` | All patients + staff within their hospital |\n| `doctor` | Only patients where they are the assigned doctor |\n| `staff` | Same patient scope as admin but cannot create/edit |\n\n### Write restrictions (backend returns 403 for these)\n\n| Action | doctor | admin | staff | superadmin |\n|---|---|---|---|---|\n| POST /patients/{id}/notes | ✅ | ✅ | ❌ | ✅ |\n| POST/DELETE /appointments | ✅ | ✅ | ❌ | ✅ |\n| PUT /alerts/{id}/assign | ✅ | ✅ | ❌ | ✅ |\n| PUT /alerts/{id}/resolve | ✅ | ✅ | ✅ | ✅ |\n| PATCH /staff/{id}/approve | ❌ | ✅ | ❌ | ✅ |\n| POST /patients | ❌ | ✅ | ❌ | ✅ |\n\n---\n\n## Approval flow\n\nDoctors and staff must be approved before they can use the API:\n\n1. `POST /auth/register` with `role: \"doctor\"` or `role: \"staff\"`\n2. Response has `approval_status: \"pending\"` — the token is issued but all protected routes return **403 Account pending approval**\n3. An admin calls `PATCH /staff/{id}/approve` with `action: \"approve\"`\n4. The doctor/staff can now access all protected routes\n\n---\n\n## Key field reference\n\n### healthScore\nDerived from each patient's personal 28-day vital baseline. Never population-compared.\n\n| Value | Status | Colour |\n|---|---|---|\n| `85` | Stable | Green |\n| `65` | Watch | Yellow |\n| `45` | Elevated | Orange |\n| `20` | Urgent | Red |\n| `null` | Calibrating — less than 28 days of data | Grey |\n\n### alertLevel\nHighest-priority **pending** alert on the patient. Resolved alerts do not affect this.\n\n| Value | Meaning | Colour |\n|---|---|---|\n| `\"L1\"` | Critical alert pending | Red |\n| `\"L2\"` | Warning alert pending | Amber |\n| `\"L3\"` | No pending alerts | Green |\n\n### displayId\nHuman-readable ID shown in the UI: `SCW-001`, `SCW-042`, etc. Always display this instead of the numeric `id`. Use numeric `id` only in URL path params.",
+        "description": "REST API for the STATRA Doctor Dashboard web app.\n\n---\n\n## How to use this docs\n\n1. Click **Authorize** (top right) and paste your Bearer token.\n2. All endpoints auto-include the token after that.\n3. To get a token: expand **Auth → POST /auth/login**, click **Try it out**, fill the body, hit **Execute**.\n\n---\n\n## Standard response envelope\n\nEvery response wraps data in this shape:\n\n```json\n{ \"success\": true, \"message\": \"...\", \"data\": { ... } }\n```\n\nPaginated lists add a `meta` key:\n```json\n{ \"success\": true, \"data\": [...], \"meta\": { \"current_page\": 1, \"per_page\": 20, \"total\": 84, \"last_page\": 5 } }\n```\n\nErrors:\n```json\n{ \"success\": false, \"message\": \"Human-readable message.\" }\n```\n\nValidation errors (422):\n```json\n{ \"success\": false, \"message\": \"Validation failed.\", \"errors\": { \"field\": [\"reason\"] } }\n```\n\n---\n\n## Role system\n\nAll data queries are scoped **automatically** by the backend based on the token's role. You don't pass a role param — the backend reads it from the token.\n\n| Role | What they can query |\n|---|---|\n| `superadmin` | All patients across all hospitals |\n| `admin` | All patients + staff within their hospital |\n| `doctor` | Only patients where they are the assigned doctor |\n| `staff` | Same patient scope as admin but cannot create/edit |\n\n### Write restrictions (backend returns 403 for these)\n\n| Action | doctor | admin | staff | superadmin |\n|---|---|---|---|---|\n| POST /patients/{id}/notes | ✅ | ✅ | ❌ | ✅ |\n| POST/DELETE /appointments | ✅ | ✅ | ❌ | ✅ |\n| PUT /alerts/{id}/assign | ✅ | ✅ | ❌ | ✅ |\n| PUT /alerts/{id}/resolve | ✅ | ✅ | ✅ | ✅ |\n| PATCH /staff/{id}/approve | ❌ | ✅ | ❌ | ✅ |\n| POST /patients | ❌ | ✅ | ❌ | ✅ |\n| Superadmin /superadmin/* routes | ❌ | ❌ | ❌ | ✅ |\n\n---\n\n## Superadmin — hospital onboarding\n\nSuperadmin is the product-owner role. It can see all data across all hospitals and is the only role that can create hospitals and their first admin.\n\n**Onboarding flow:**\n1. `POST /superadmin/hospitals` — create the hospital record\n2. `POST /superadmin/hospitals/{id}/admin` — create the first admin (name + email only). Backend sends an invite email with a set-password link (72h expiry).\n3. Admin clicks the link → hits `POST /auth/accept-invite` (public) → sets their password → receives a Sanctum token and is logged in.\n\nThe invite link sent to the admin looks like:\n`https://dashboard.statra.health/auth/accept-invite?token=<token>&email=<email>`\n\n---\n\n## Approval flow\n\nDoctors and staff must be approved before they can use the API:\n\n1. `POST /auth/register` with `role: \"doctor\"` or `role: \"staff\"`\n2. Response has `approval_status: \"pending\"` — the token is issued but all protected routes return **403 Account pending approval**\n3. An admin calls `PATCH /staff/{id}/approve` with `action: \"approve\"`\n4. The doctor/staff can now access all protected routes\n\n---\n\n## Key field reference\n\n### healthScore\nDerived from each patient's personal 28-day vital baseline. Never population-compared.\n\n| Value | Status | Colour |\n|---|---|---|\n| `85` | Stable | Green |\n| `65` | Watch | Yellow |\n| `45` | Elevated | Orange |\n| `20` | Urgent | Red |\n| `null` | Calibrating — less than 28 days of data | Grey |\n\n### alertLevel\nHighest-priority **pending** alert on the patient. Resolved alerts do not affect this.\n\n| Value | Meaning | Colour |\n|---|---|---|\n| `\"L1\"` | Critical alert pending | Red |\n| `\"L2\"` | Warning alert pending | Amber |\n| `\"L3\"` | No pending alerts | Green |\n\n### displayId\nHuman-readable ID shown in the UI: `SCW-001`, `SCW-042`, etc. Always display this instead of the numeric `id`. Use numeric `id` only in URL path params.",
         "contact": {
             "email": "hello@statra.health"
         },
@@ -2132,6 +2132,79 @@
                 ]
             }
         },
+        "/api/v1/doctor/reports/alerts-analytics": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Alert counts by type, level, and status",
+                "description": "Returns a flat analytics summary for the current role scope — total, critical, warnings, pending, resolved, last 7 days, and a breakdown by alert type.",
+                "operationId": "79b299f66da3653a41e04cb7722d4271",
+                "responses": {
+                    "200": {
+                        "description": "Analytics summary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 120
+                                                },
+                                                "critical": {
+                                                    "description": "Alerts with level=1",
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "warnings": {
+                                                    "description": "Alerts with level=2",
+                                                    "type": "integer",
+                                                    "example": 38
+                                                },
+                                                "pending": {
+                                                    "type": "integer",
+                                                    "example": 25
+                                                },
+                                                "resolved": {
+                                                    "type": "integer",
+                                                    "example": 95
+                                                },
+                                                "last_7_days": {
+                                                    "type": "integer",
+                                                    "example": 18
+                                                },
+                                                "by_type": {
+                                                    "description": "Object keyed by alert type with count as value",
+                                                    "type": "object",
+                                                    "example": {
+                                                        "fever": 14,
+                                                        "hypoxia": 8,
+                                                        "tachycardia": 5
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/doctor/reports/export": {
             "get": {
                 "tags": [
@@ -2169,6 +2242,601 @@
                         "content": {
                             "text/csv": {}
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/auth/accept-invite": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Set password from hospital admin invite link",
+                "description": "Public endpoint. Called when a newly invited hospital admin clicks their invite email link. Validates the token, sets the password, and returns a Sanctum token — the admin is immediately logged in. Invite tokens expire after 72 hours.",
+                "operationId": "4ebee57d4b589b2f8737701629cee1fe",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string",
+                                        "example": "abc123..."
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@luth.gov.ng"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "Secure123!"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "Secure123!"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password set, token returned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Password set. You are now logged in."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string"
+                                                },
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "fullName": {
+                                                            "type": "string"
+                                                        },
+                                                        "email": {
+                                                            "type": "string"
+                                                        },
+                                                        "role": {
+                                                            "type": "string",
+                                                            "example": "admin"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired invite token"
+                    }
+                }
+            }
+        },
+        "/api/v1/doctor/superadmin/hospitals": {
+            "get": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "List all hospitals",
+                "description": "Returns every hospital with patient and staff counts. Superadmin only.",
+                "operationId": "d791aa1ab1067ca75a0eb7773236e35f",
+                "responses": {
+                    "200": {
+                        "description": "Hospital list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Lagos University Teaching Hospital"
+                                                    },
+                                                    "city": {
+                                                        "type": "string",
+                                                        "example": "Lagos"
+                                                    },
+                                                    "country": {
+                                                        "type": "string",
+                                                        "example": "Nigeria"
+                                                    },
+                                                    "contactEmail": {
+                                                        "type": "string",
+                                                        "example": "admin@luth.gov.ng"
+                                                    },
+                                                    "contactPhone": {
+                                                        "type": "string",
+                                                        "example": "+2348012345678"
+                                                    },
+                                                    "isActive": {
+                                                        "type": "boolean",
+                                                        "example": true
+                                                    },
+                                                    "stats": {
+                                                        "properties": {
+                                                            "totalPatients": {
+                                                                "type": "integer",
+                                                                "example": 150
+                                                            },
+                                                            "totalStaff": {
+                                                                "type": "integer",
+                                                                "example": 12
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    },
+                                                    "createdAt": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Superadmin only"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "Create a hospital",
+                "description": "Creates a new hospital record. After creating, use POST /superadmin/hospitals/{id}/admin to add the first admin. Superadmin only.",
+                "operationId": "1134d082fe10b7d39776665d09db1aab",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Lagos University Teaching Hospital"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "1 Idi-Araba, Surulere",
+                                        "nullable": true
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "example": "Lagos",
+                                        "nullable": true
+                                    },
+                                    "country": {
+                                        "type": "string",
+                                        "example": "Nigeria",
+                                        "nullable": true
+                                    },
+                                    "contact_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@luth.gov.ng",
+                                        "nullable": true
+                                    },
+                                    "contact_phone": {
+                                        "type": "string",
+                                        "example": "+2348012345678",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Hospital created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed — name must be unique"
+                    },
+                    "403": {
+                        "description": "Superadmin only"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/superadmin/hospitals/{id}": {
+            "get": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "Get hospital detail",
+                "description": "Returns hospital info plus a list of all admin accounts linked to it. Superadmin only.",
+                "operationId": "4466aeb2d2640c44947d772893eab4db",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hospital detail + admins",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "isActive": {
+                                                    "type": "boolean"
+                                                },
+                                                "stats": {
+                                                    "type": "object"
+                                                },
+                                                "admins": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "email": {
+                                                                "type": "string"
+                                                            },
+                                                            "approvalStatus": {
+                                                                "type": "string",
+                                                                "example": "approved"
+                                                            },
+                                                            "createdAt": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hospital not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "Update hospital info",
+                "operationId": "0b230378bbfb40a8189dd52457762f4e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "country": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "contact_email": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "contact_phone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Hospital updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hospital not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/superadmin/hospitals/{id}/toggle": {
+            "patch": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "Activate or deactivate a hospital",
+                "description": "Toggles `isActive`. Superadmin only.",
+                "operationId": "8213bb9eccf8291415244812e4f3189c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Toggle applied",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Hospital deactivated."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "isActive": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hospital not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctor/superadmin/hospitals/{id}/admin": {
+            "post": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "Create the first admin for a hospital",
+                "description": "Creates an admin user linked to the hospital and sends them an invite email with a set-password link (72h expiry).\n\nThe admin clicks the link → hits `POST /auth/accept-invite` → sets their password → is immediately logged in.\n\nIf the invite expires, delete the user and re-run this endpoint. Superadmin only.",
+                "operationId": "506f00e217de3d670ca7202ff8f1f7a8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Hospital ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "first_name",
+                                    "last_name",
+                                    "email"
+                                ],
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Amaka"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Osei"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "amaka.osei@luth.gov.ng"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+2348012345678",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Admin created, invite email sent",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Admin created and invite sent."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 42
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Amaka Osei"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "amaka.osei@luth.gov.ng"
+                                                },
+                                                "hospitalId": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "inviteSent": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hospital not found"
+                    },
+                    "422": {
+                        "description": "Validation failed — email already in use"
                     }
                 },
                 "security": [
@@ -2602,6 +3270,10 @@
         {
             "name": "Reports",
             "description": "Aggregated data for reports page. Last endpoint exports a CSV file."
+        },
+        {
+            "name": "Superadmin",
+            "description": "**Superadmin only.** Hospital management — create hospitals, invite first admin, activate/deactivate. All routes are prefixed `/superadmin/`."
         }
     ]
 }
