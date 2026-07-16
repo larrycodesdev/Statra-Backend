@@ -164,7 +164,8 @@
                 "tags": [
                     "Patient Auth"
                 ],
-                "summary": "Sign in with Google / Apple / Facebook",
+                "summary": "Sign in with Google (Firebase) / Apple / Facebook",
+                "description": "Unified social login endpoint. Provider-specific notes:\n\n**firebase** — Send the Firebase ID token from the Firebase Auth SDK.\nToken is a signed JWT; backend verifies signature + project ID.\n`first_name` / `last_name` are read from the token automatically.\n\n**apple** — Send the `identityToken` from the `sign_in_with_apple` Flutter package.\nApple does NOT include the user's name in the token; it is only available\non the very first sign-in. Pass `first_name` and `last_name` separately on\nfirst login — on subsequent logins they can be omitted.\n\n**google / facebook** — Send the OAuth `accessToken` from the provider SDK.\nBackend verifies via Laravel Socialite.",
                 "operationId": "e0ecd2a19f6e6cb6d7b623cfc6a15fdf",
                 "requestBody": {
                     "required": true,
@@ -179,14 +180,25 @@
                                     "provider": {
                                         "type": "string",
                                         "enum": [
+                                            "firebase",
                                             "google",
                                             "apple",
                                             "facebook"
                                         ]
                                     },
                                     "token": {
-                                        "description": "OAuth access token from provider SDK",
+                                        "description": "ID token (firebase/apple) or access token (google/facebook)",
                                         "type": "string"
+                                    },
+                                    "first_name": {
+                                        "description": "Apple only — required on first sign-in",
+                                        "type": "string",
+                                        "example": "Amara"
+                                    },
+                                    "last_name": {
+                                        "description": "Apple only — required on first sign-in",
+                                        "type": "string",
+                                        "example": "Nwosu"
                                     }
                                 },
                                 "type": "object"
@@ -206,7 +218,17 @@
                         }
                     },
                     "401": {
-                        "description": "Invalid social token",
+                        "description": "Invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "No email on account",
                         "content": {
                             "application/json": {
                                 "schema": {

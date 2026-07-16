@@ -110,16 +110,38 @@ class MobileAppSpec
     #[OA\Response(response: 401, description: 'Invalid credentials', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse'))]
     public function patientLogin() {}
 
-    #[OA\Post(path: '/api/v1/patient/auth/social', summary: 'Sign in with Google / Apple / Facebook', tags: ['Patient Auth'])]
+    #[OA\Post(
+        path: '/api/v1/patient/auth/social',
+        summary: 'Sign in with Google (Firebase) / Apple / Facebook',
+        description: <<<'DESC'
+Unified social login endpoint. Provider-specific notes:
+
+**firebase** — Send the Firebase ID token from the Firebase Auth SDK.
+Token is a signed JWT; backend verifies signature + project ID.
+`first_name` / `last_name` are read from the token automatically.
+
+**apple** — Send the `identityToken` from the `sign_in_with_apple` Flutter package.
+Apple does NOT include the user's name in the token; it is only available
+on the very first sign-in. Pass `first_name` and `last_name` separately on
+first login — on subsequent logins they can be omitted.
+
+**google / facebook** — Send the OAuth `accessToken` from the provider SDK.
+Backend verifies via Laravel Socialite.
+DESC,
+        tags: ['Patient Auth'],
+    )]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(
         required: ['provider', 'token'],
         properties: [
-            new OA\Property(property: 'provider', type: 'string', enum: ['google', 'apple', 'facebook']),
-            new OA\Property(property: 'token',    type: 'string', description: 'OAuth access token from provider SDK'),
+            new OA\Property(property: 'provider',   type: 'string', enum: ['firebase', 'google', 'apple', 'facebook']),
+            new OA\Property(property: 'token',      type: 'string', description: 'ID token (firebase/apple) or access token (google/facebook)'),
+            new OA\Property(property: 'first_name', type: 'string', description: 'Apple only — required on first sign-in', example: 'Amara'),
+            new OA\Property(property: 'last_name',  type: 'string', description: 'Apple only — required on first sign-in', example: 'Nwosu'),
         ]
     ))]
     #[OA\Response(response: 200, description: 'Social login successful', content: new OA\JsonContent(ref: '#/components/schemas/AuthResponse'))]
-    #[OA\Response(response: 401, description: 'Invalid social token',    content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse'))]
+    #[OA\Response(response: 401, description: 'Invalid token',           content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse'))]
+    #[OA\Response(response: 422, description: 'No email on account',     content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse'))]
     public function patientSocial() {}
 
     #[OA\Post(path: '/api/v1/patient/auth/forgot-password', summary: 'Step 1 — Request 6-digit OTP via email', tags: ['Patient Auth'])]

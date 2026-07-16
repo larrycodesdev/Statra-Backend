@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
+use App\Services\AppleTokenVerifier;
 use App\Services\FirebaseTokenVerifier;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -88,8 +89,10 @@ class AuthController extends Controller
     public function social(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'provider' => ['required', 'in:firebase,google,apple,facebook'],
-            'token'    => ['required', 'string'],
+            'provider'   => ['required', 'in:firebase,google,apple,facebook'],
+            'token'      => ['required', 'string'],
+            'first_name' => ['sometimes', 'string', 'max:100'],
+            'last_name'  => ['sometimes', 'string', 'max:100'],
         ]);
 
         // Firebase ID token path — used when mobile app signs in via Firebase Auth SDK
@@ -109,6 +112,25 @@ class AuthController extends Controller
             $firstName = $nameParts[0] ?? '';
             $lastName  = $nameParts[1] ?? '';
             $avatar    = $payload['picture'] ?? null;
+
+        } elseif ($data['provider'] === 'apple') {
+            // Apple identity token path — name is NOT in the token (only provided on first sign-in)
+            // Mobile dev must send first_name/last_name from sign_in_with_apple package on first login
+            try {
+                $payload = (new AppleTokenVerifier())->verify($data['token']);
+            } catch (\Throwable) {
+                return ApiResponse::error('Invalid Apple identity token.', 401);
+            }
+
+            $email = $payload['email'] ?? null;
+            if (!$email) {
+                return ApiResponse::error('This Apple account has no email address. Ensure "Share My Email" is selected.', 422);
+            }
+
+            $firstName = $data['first_name'] ?? '';
+            $lastName  = $data['last_name'] ?? '';
+            $avatar    = null;
+
         } else {
             // Socialite path — direct OAuth flow (access token)
             try {
