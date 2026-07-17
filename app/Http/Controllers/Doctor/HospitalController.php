@@ -107,6 +107,7 @@ class HospitalController extends Controller
             'first_name'         => $data['first_name'],
             'last_name'          => $data['last_name'],
             'name'               => $data['first_name'] . ' ' . $data['last_name'],
+            'username'           => $this->generateUsername($data['first_name']),
             'email'              => $data['email'],
             'password'           => Hash::make(Str::random(32)),
             'role'               => 'admin',
@@ -153,5 +154,17 @@ class HospitalController extends Controller
             ],
             'createdAt'    => $hospital->created_at->toISOString(),
         ];
+    }
+
+    private function generateUsername(string $firstName): string
+    {
+        $base      = Str::slug(strtolower($firstName), '');
+        $candidate = $base . random_int(100, 9999);
+
+        while (User::where('username', $candidate)->exists()) {
+            $candidate = $base . random_int(100, 9999);
+        }
+
+        return $candidate;
     }
 }

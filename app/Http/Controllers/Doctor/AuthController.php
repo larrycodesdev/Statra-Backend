@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class AuthController extends Controller
@@ -36,6 +37,7 @@ class AuthController extends Controller
             'first_name'      => $data['first_name'],
             'last_name'       => $data['last_name'],
             'name'            => $data['first_name'] . ' ' . $data['last_name'],
+            'username'        => $this->generateUsername($data['first_name']),
             'email'           => $data['email'],
             'password'        => Hash::make($data['password']),
             'role'            => $data['role'],
@@ -174,6 +176,18 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return ApiResponse::success(null, 'Logged out successfully.');
+    }
+
+    private function generateUsername(string $firstName): string
+    {
+        $base = Str::slug(strtolower($firstName), '');
+        $candidate = $base . random_int(100, 9999);
+
+        while (User::where('username', $candidate)->exists()) {
+            $candidate = $base . random_int(100, 9999);
+        }
+
+        return $candidate;
     }
 
     private function userResource(User $user): array
