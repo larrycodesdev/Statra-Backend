@@ -11,6 +11,7 @@ use App\Services\QueryScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class PatientController extends Controller
 {
@@ -53,12 +54,17 @@ class PatientController extends Controller
             'assigned_doctor_id' => ['nullable', 'exists:users,id'],
         ]);
 
+        $nameParts = explode(' ', trim($data['name']), 2);
+
         $patientUser = \App\Models\User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role'     => 'patient',
-            'phone'    => $data['phone'] ?? null,
+            'name'       => $data['name'],
+            'first_name' => $nameParts[0],
+            'last_name'  => $nameParts[1] ?? '',
+            'username'   => $this->generateUsername($nameParts[0]),
+            'email'      => $data['email'],
+            'password'   => Hash::make($data['password']),
+            'role'       => 'patient',
+            'phone'      => $data['phone'] ?? null,
         ]);
 
         $patient = Patient::create([
@@ -129,6 +135,39 @@ class PatientController extends Controller
             'devices'         => $patient->devices,
             'emergencyContacts' => $patient->emergencyContacts,
         ]);
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $patient = $this->resolvePatient($request, $id);
+
+        if (!$patient) {
+            return ApiResponse::notFound('Patient not found.');
+        }
+
+        if ($request->user()->role === 'staff') {
+            return ApiResponse::error('Access denied. Read-only role cannot update patients.', 403);
+        }
+
+        $data = $request->validate([
+            'assigned_doctor_id' => ['sometimes', 'nullable', 'exists:users,id'],
+            'assigned_nurse_id'  => ['sometimes', 'nullable', 'exists:users,id'],
+            'hospital_id'        => ['sometimes', 'nullable', 'exists:hospitals,id'],
+            'ward'               => ['sometimes', 'nullable', 'string', 'max:100'],
+            'admitted_at'        => ['sometimes', 'nullable', 'date'],
+            'genotype'           => ['sometimes', 'nullable', 'string', 'max:10'],
+            'blood_type'         => ['sometimes', 'nullable', 'string', 'max:10'],
+            'date_of_birth'      => ['sometimes', 'nullable', 'date'],
+            'gender'             => ['sometimes', 'nullable', 'in:male,female,other'],
+        ]);
+
+        $patient->update($data);
+
+        return ApiResponse::success($this->patientCard($patient->fresh()->load([
+            'user:id,name,first_name,last_name,email,phone,avatar',
+            'assignedDoctor:id,name,first_name,last_name',
+            'assignedNurse:id,name,first_name,last_name',
+        ])), 'Patient updated.');
     }
 
     public function vitals(Request $request, int $id): JsonResponse
@@ -255,6 +294,18 @@ class PatientController extends Controller
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private function generateUsername(string $firstName): string
+    {
+        $base      = Str::slug(strtolower($firstName), '');
+        $candidate = $base . random_int(100, 9999);
+
+        while (\App\Models\User::where('username', $candidate)->exists()) {
+            $candidate = $base . random_int(100, 9999);
+        }
+
+        return $candidate;
+    }
 
     private function resolvePatient(Request $request, int $id): ?Patient
     {

@@ -42,6 +42,22 @@ class AlertController extends Controller
         return ApiResponse::paginated($alerts);
     }
 
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $alert = $this->resolveAlert($request, $id);
+
+        if (!$alert) {
+            return ApiResponse::notFound('Alert not found.');
+        }
+
+        $alert->load([
+            'patient.user:id,name,first_name,last_name,avatar',
+            'vitalReading:id,type,value,unit,recorded_at',
+        ]);
+
+        return ApiResponse::success($this->formatAlert($alert));
+    }
+
     public function resolve(Request $request, int $id): JsonResponse
     {
         $alert = $this->resolveAlert($request, $id);

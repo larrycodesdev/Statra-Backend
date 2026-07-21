@@ -39,6 +39,7 @@ Route::middleware(['auth:sanctum', 'staff'])->group(function () {
     Route::get('patients',                     [PatientController::class, 'index']);
     Route::post('patients',                    [PatientController::class, 'store']);
     Route::get('patients/{id}',                [PatientController::class, 'show']);
+    Route::patch('patients/{id}',              [PatientController::class, 'update']);
     Route::get('patients/{id}/vitals',         [PatientController::class, 'vitals']);
     Route::get('patients/{id}/alerts',         [PatientController::class, 'alerts']);
     Route::get('patients/{id}/medications',    [PatientController::class, 'medications']);
@@ -46,6 +47,7 @@ Route::middleware(['auth:sanctum', 'staff'])->group(function () {
 
     // Alerts
     Route::get('alerts',               [AlertController::class, 'index']);
+    Route::get('alerts/{id}',          [AlertController::class, 'show']);
     Route::put('alerts/{id}/resolve',  [AlertController::class, 'resolve']);
     Route::put('alerts/{id}/assign',   [AlertController::class, 'assign']);
 
