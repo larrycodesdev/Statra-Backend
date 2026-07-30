@@ -520,6 +520,29 @@ DESC,
     #[OA\Response(response: 200, description: 'Patient detail', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse'))]
     public function doctorPatientShow() {}
 
+    #[OA\Patch(
+        path: '/api/v1/doctor/patients/{id}',
+        summary: 'Update patient assignment and clinical info — 403 for staff role',
+        security: [['bearerAuth' => []]],
+        tags: ['Doctor Patients'],
+    )]
+    #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(properties: [
+        new OA\Property(property: 'assigned_doctor_id', type: 'integer', nullable: true, example: 3,   description: 'Reassign attending doctor'),
+        new OA\Property(property: 'assigned_nurse_id',  type: 'integer', nullable: true, example: 5,   description: 'Reassign attending nurse'),
+        new OA\Property(property: 'hospital_id',        type: 'integer', nullable: true, example: 1),
+        new OA\Property(property: 'ward',               type: 'string',  nullable: true, example: 'Haematology Ward A'),
+        new OA\Property(property: 'admitted_at',        type: 'string',  format: 'date', nullable: true, example: '2026-07-01'),
+        new OA\Property(property: 'genotype',           type: 'string',  nullable: true, example: 'SS'),
+        new OA\Property(property: 'blood_type',         type: 'string',  nullable: true, example: 'O+'),
+        new OA\Property(property: 'gender',             type: 'string',  nullable: true, enum: ['male', 'female', 'other']),
+        new OA\Property(property: 'date_of_birth',      type: 'string',  format: 'date', nullable: true, example: '1998-03-14'),
+    ]))]
+    #[OA\Response(response: 200, description: 'Patient updated', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse'))]
+    #[OA\Response(response: 403, description: 'Staff role cannot update patients', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse'))]
+    #[OA\Response(response: 404, description: 'Patient not found', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse'))]
+    public function doctorPatientUpdate() {}
+
     #[OA\Get(path: '/api/v1/doctor/patients/{id}/vitals', summary: "Get a patient's vitals", security: [['bearerAuth' => []]], tags: ['Doctor Patients'])]
     #[OA\Parameter(name: 'id',    in: 'path',  required: true, schema: new OA\Schema(type: 'integer'))]
     #[OA\Parameter(name: 'type',  in: 'query', schema: new OA\Schema(type: 'string'))]
@@ -555,6 +578,37 @@ DESC,
     #[OA\Parameter(name: 'level',  in: 'query', schema: new OA\Schema(type: 'integer', enum: [1, 2]))]
     #[OA\Response(response: 200, description: 'Alerts', content: new OA\JsonContent(ref: '#/components/schemas/PaginatedResponse'))]
     public function doctorAlerts() {}
+
+    #[OA\Get(
+        path: '/api/v1/doctor/alerts/{id}',
+        summary: 'Get single alert detail — use for the View button',
+        security: [['bearerAuth' => []]],
+        tags: ['Doctor Alerts'],
+    )]
+    #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))]
+    #[OA\Response(response: 200, description: 'Alert detail', content: new OA\JsonContent(properties: [
+        new OA\Property(property: 'success', type: 'boolean', example: true),
+        new OA\Property(property: 'data', type: 'object', properties: [
+            new OA\Property(property: 'id',      type: 'integer', example: 1),
+            new OA\Property(property: 'type',    type: 'string',  example: 'temperature_high'),
+            new OA\Property(property: 'level',   type: 'integer', example: 1),
+            new OA\Property(property: 'message', type: 'string',  example: 'Temperature is 38.7°C — fever ≥38.5°C.'),
+            new OA\Property(property: 'status',  type: 'string',  enum: ['pending', 'acknowledged', 'resolved']),
+            new OA\Property(property: 'patient', type: 'object', properties: [
+                new OA\Property(property: 'id',   type: 'integer', example: 5),
+                new OA\Property(property: 'name', type: 'string',  example: 'Jane Johnson'),
+            ]),
+            new OA\Property(property: 'vital_reading', type: 'object', nullable: true, properties: [
+                new OA\Property(property: 'type',        type: 'string',  example: 'temperature'),
+                new OA\Property(property: 'value',       type: 'number',  example: 38.7),
+                new OA\Property(property: 'unit',        type: 'string',  example: '°C'),
+                new OA\Property(property: 'recorded_at', type: 'string',  format: 'date-time'),
+            ]),
+            new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        ]),
+    ]))]
+    #[OA\Response(response: 404, description: 'Alert not found', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse'))]
+    public function doctorAlertShow() {}
 
     #[OA\Put(path: '/api/v1/doctor/alerts/{id}/resolve', summary: 'Mark alert as resolved', security: [['bearerAuth' => []]], tags: ['Doctor Alerts'])]
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))]
