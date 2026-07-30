@@ -93,10 +93,43 @@ class HealthTrackerController extends Controller
             ->limit($limit)
             ->get(['id', 'symptom', 'severity', 'severity_label', 'triggers', 'mood', 'logged_at']);
 
+        $patient->loadMissing('assignedDoctor.doctor', 'assignedNurse');
+        $careTeam = $this->careTeam($patient);
+
         return ApiResponse::success([
             'heart_rate'      => $heartRate,
             'medication_logs' => $medicationLogs,
             'symptoms'        => $symptoms,
+            'care_team'       => $careTeam,
         ]);
+    }
+
+    private function careTeam(\App\Models\Patient $patient): array
+    {
+        $members = [];
+
+        if ($patient->assigned_doctor_id && $patient->assignedDoctor) {
+            $doctor    = $patient->assignedDoctor;
+            $members[] = [
+                'role'           => 'doctor',
+                'id'             => $doctor->id,
+                'name'           => $doctor->full_name,
+                'avatar'         => $doctor->avatar,
+                'specialisation' => $doctor->doctor?->specialisation,
+                'hospital'       => $doctor->doctor?->hospital_name,
+            ];
+        }
+
+        if ($patient->assigned_nurse_id && $patient->assignedNurse) {
+            $nurse     = $patient->assignedNurse;
+            $members[] = [
+                'role'   => 'nurse',
+                'id'     => $nurse->id,
+                'name'   => $nurse->full_name,
+                'avatar' => $nurse->avatar,
+            ];
+        }
+
+        return $members;
     }
 }
