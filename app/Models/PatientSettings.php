@@ -14,17 +14,19 @@ class PatientSettings extends Model
         'share_medication_records',
         'reminder_enabled',
         'smart_alert_enabled',
+        'push_notifications_enabled',
     ];
 
     protected function casts(): array
     {
         return [
-            'allow_doctor_view_records' => 'boolean',
-            'allow_doctor_view_data'    => 'boolean',
-            'share_symptom_pain_data'   => 'boolean',
-            'share_medication_records'  => 'boolean',
-            'reminder_enabled'          => 'boolean',
-            'smart_alert_enabled'       => 'boolean',
+            'allow_doctor_view_records'  => 'boolean',
+            'allow_doctor_view_data'     => 'boolean',
+            'share_symptom_pain_data'    => 'boolean',
+            'share_medication_records'   => 'boolean',
+            'reminder_enabled'           => 'boolean',
+            'smart_alert_enabled'        => 'boolean',
+            'push_notifications_enabled' => 'boolean',
         ];
     }
 

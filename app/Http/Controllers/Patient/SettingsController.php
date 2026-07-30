@@ -20,12 +20,13 @@ class SettingsController extends Controller
     public function update(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'allow_doctor_view_records' => ['sometimes', 'boolean'],
-            'allow_doctor_view_data'    => ['sometimes', 'boolean'],
-            'share_symptom_pain_data'   => ['sometimes', 'boolean'],
-            'share_medication_records'  => ['sometimes', 'boolean'],
-            'reminder_enabled'          => ['sometimes', 'boolean'],
-            'smart_alert_enabled'       => ['sometimes', 'boolean'],
+            'allow_doctor_view_records'  => ['sometimes', 'boolean'],
+            'allow_doctor_view_data'     => ['sometimes', 'boolean'],
+            'share_symptom_pain_data'    => ['sometimes', 'boolean'],
+            'share_medication_records'   => ['sometimes', 'boolean'],
+            'reminder_enabled'           => ['sometimes', 'boolean'],
+            'smart_alert_enabled'        => ['sometimes', 'boolean'],
+            'push_notifications_enabled' => ['sometimes', 'boolean'],
         ]);
 
         $patient  = $request->user()->patient;
@@ -46,6 +47,7 @@ class SettingsController extends Controller
             'share_medication_records'   => $settings->share_medication_records,
             'reminder_enabled'           => $settings->reminder_enabled,
             'smart_alert_enabled'        => $settings->smart_alert_enabled,
+            'push_notifications_enabled' => $settings->push_notifications_enabled ?? true,
             'contact_support_enabled'    => true,
         ];
     }
