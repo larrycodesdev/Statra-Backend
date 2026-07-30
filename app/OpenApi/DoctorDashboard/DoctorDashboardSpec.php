@@ -554,6 +554,37 @@ class DoctorDashboardSpec
     )]
     public function patientShow() {}
 
+    #[OA\Patch(
+        path: '/api/v1/doctor/patients/{id}',
+        summary: 'Update patient — assign doctor/nurse, update ward and clinical fields',
+        description: 'All fields optional. Staff role gets 403.',
+        tags: ['Patients'],
+        security: [['bearerAuth' => []]],
+        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'assigned_doctor_id', type: 'integer', nullable: true, example: 3),
+            new OA\Property(property: 'assigned_nurse_id',  type: 'integer', nullable: true, example: 5),
+            new OA\Property(property: 'hospital_id',        type: 'integer', nullable: true, example: 1),
+            new OA\Property(property: 'ward',               type: 'string',  nullable: true, example: 'Haematology Ward A'),
+            new OA\Property(property: 'admitted_at',        type: 'string',  format: 'date', nullable: true, example: '2026-07-01'),
+            new OA\Property(property: 'genotype',           type: 'string',  nullable: true, example: 'SS'),
+            new OA\Property(property: 'blood_type',         type: 'string',  nullable: true, example: 'O+'),
+            new OA\Property(property: 'gender',             type: 'string',  enum: ['male', 'female', 'other'], nullable: true),
+            new OA\Property(property: 'date_of_birth',      type: 'string',  format: 'date', nullable: true),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Patient updated', content: new OA\JsonContent(
+                type: 'object', properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', ref: '#/components/schemas/PatientCard'),
+                ]
+            )),
+            new OA\Response(response: 403, description: 'Staff role is read-only', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
+    public function patientUpdate() {}
+
     #[OA\Get(
         path: '/api/v1/doctor/patients/{id}/vitals',
         summary: 'Patient vitals snapshot',
@@ -675,6 +706,24 @@ MD,
         ]
     )]
     public function alertIndex() {}
+
+    #[OA\Get(
+        path: '/api/v1/doctor/alerts/{id}',
+        summary: 'Get single alert detail',
+        tags: ['Alerts'],
+        security: [['bearerAuth' => []]],
+        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Alert detail', content: new OA\JsonContent(
+                type: 'object', properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', ref: '#/components/schemas/AlertItem'),
+                ]
+            )),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
+    public function alertShow() {}
 
     #[OA\Put(
         path: '/api/v1/doctor/alerts/{id}/resolve',

@@ -298,30 +298,52 @@ DESC,
 
     // ── PATIENT SETTINGS ──────────────────────────────────────────────────────
 
-    #[OA\Get(path: '/api/v1/patient/settings', summary: 'Get privacy and notification settings', security: [['bearerAuth' => []]], tags: ['Patient Settings'])]
-    #[OA\Response(response: 200, description: 'Settings', content: new OA\JsonContent(properties: [
-        new OA\Property(property: 'success', type: 'boolean', example: true),
-        new OA\Property(property: 'data', type: 'object', properties: [
-            new OA\Property(property: 'allow_doctor_view_records', type: 'boolean', example: true),
-            new OA\Property(property: 'allow_doctor_view_data',    type: 'boolean', example: true),
-            new OA\Property(property: 'share_symptom_pain_data',   type: 'boolean', example: true),
-            new OA\Property(property: 'share_medication_records',  type: 'boolean', example: true),
-            new OA\Property(property: 'reminder_enabled',          type: 'boolean', example: true),
-            new OA\Property(property: 'smart_alert_enabled',       type: 'boolean', example: true),
-        ]),
-    ]))]
+    #[OA\Get(
+        path: '/api/v1/patient/settings',
+        summary: 'Get privacy and notification settings',
+        security: [['bearerAuth' => []]],
+        tags: ['Patient Settings'],
+        responses: [
+            new OA\Response(response: 200, description: 'Settings', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'data', type: 'object', properties: [
+                    new OA\Property(property: 'allow_doctor_view_records',  type: 'boolean', example: true),
+                    new OA\Property(property: 'allow_doctor_view_data',     type: 'boolean', example: true),
+                    new OA\Property(property: 'share_symptom_pain_data',    type: 'boolean', example: true),
+                    new OA\Property(property: 'share_medication_records',   type: 'boolean', example: true),
+                    new OA\Property(property: 'reminder_enabled',           type: 'boolean', example: true),
+                    new OA\Property(property: 'smart_alert_enabled',        type: 'boolean', example: true),
+                    new OA\Property(property: 'push_notifications_enabled', type: 'boolean', example: true),
+                    new OA\Property(property: 'contact_support_enabled',    type: 'boolean', example: true,
+                        description: 'Always true — tells the app to show the support button'),
+                ]),
+            ])),
+        ]
+    )]
     public function patientGetSettings() {}
 
-    #[OA\Put(path: '/api/v1/patient/settings', summary: 'Update privacy/notification toggles', security: [['bearerAuth' => []]], tags: ['Patient Settings'])]
-    #[OA\RequestBody(required: true, content: new OA\JsonContent(properties: [
-        new OA\Property(property: 'allow_doctor_view_records', type: 'boolean'),
-        new OA\Property(property: 'allow_doctor_view_data',    type: 'boolean'),
-        new OA\Property(property: 'share_symptom_pain_data',   type: 'boolean'),
-        new OA\Property(property: 'share_medication_records',  type: 'boolean'),
-        new OA\Property(property: 'reminder_enabled',          type: 'boolean'),
-        new OA\Property(property: 'smart_alert_enabled',       type: 'boolean'),
-    ]))]
-    #[OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse'))]
+    #[OA\Put(
+        path: '/api/v1/patient/settings',
+        summary: 'Update settings toggles and/or register FCM push token',
+        description: 'All fields are optional — send only what changed. `fcm_token` is write-only (stored on the user, not returned in GET). Send it here on app launch so the backend can reach this device for push notifications.',
+        security: [['bearerAuth' => []]],
+        tags: ['Patient Settings'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'allow_doctor_view_records',  type: 'boolean'),
+            new OA\Property(property: 'allow_doctor_view_data',     type: 'boolean'),
+            new OA\Property(property: 'share_symptom_pain_data',    type: 'boolean'),
+            new OA\Property(property: 'share_medication_records',   type: 'boolean'),
+            new OA\Property(property: 'reminder_enabled',           type: 'boolean'),
+            new OA\Property(property: 'smart_alert_enabled',        type: 'boolean'),
+            new OA\Property(property: 'push_notifications_enabled', type: 'boolean'),
+            new OA\Property(property: 'fcm_token', type: 'string', nullable: true,
+                example: 'fGT7s_xyz...',
+                description: 'Firebase Cloud Messaging device token. Send on every app launch to keep it fresh.'),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     public function patientUpdateSettings() {}
 
     // ── PATIENT DEVICE + VITALS ───────────────────────────────────────────────

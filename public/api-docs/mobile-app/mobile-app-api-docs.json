@@ -945,6 +945,15 @@
                                                 "smart_alert_enabled": {
                                                     "type": "boolean",
                                                     "example": true
+                                                },
+                                                "push_notifications_enabled": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "contact_support_enabled": {
+                                                    "description": "Always true — tells the app to show the support button",
+                                                    "type": "boolean",
+                                                    "example": true
                                                 }
                                             },
                                             "type": "object"
@@ -966,7 +975,8 @@
                 "tags": [
                     "Patient Settings"
                 ],
-                "summary": "Update privacy/notification toggles",
+                "summary": "Update settings toggles and/or register FCM push token",
+                "description": "All fields are optional — send only what changed. `fcm_token` is write-only (stored on the user, not returned in GET). Send it here on app launch so the backend can reach this device for push notifications.",
                 "operationId": "ec1b1f9a4c11b468453d536afc919a7c",
                 "requestBody": {
                     "required": true,
@@ -991,6 +1001,15 @@
                                     },
                                     "smart_alert_enabled": {
                                         "type": "boolean"
+                                    },
+                                    "push_notifications_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "fcm_token": {
+                                        "description": "Firebase Cloud Messaging device token. Send on every app launch to keep it fresh.",
+                                        "type": "string",
+                                        "example": "fGT7s_xyz...",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
