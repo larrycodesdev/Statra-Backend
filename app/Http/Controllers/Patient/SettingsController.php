@@ -27,7 +27,13 @@ class SettingsController extends Controller
             'reminder_enabled'           => ['sometimes', 'boolean'],
             'smart_alert_enabled'        => ['sometimes', 'boolean'],
             'push_notifications_enabled' => ['sometimes', 'boolean'],
+            'fcm_token'                  => ['sometimes', 'nullable', 'string'],
         ]);
+
+        if (array_key_exists('fcm_token', $data)) {
+            $request->user()->update(['fcm_token' => $data['fcm_token']]);
+            unset($data['fcm_token']);
+        }
 
         $patient  = $request->user()->patient;
         $settings = $patient->settings ?? $patient->settings()->create([]);
