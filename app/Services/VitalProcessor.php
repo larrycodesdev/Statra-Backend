@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Validator;
 
 class VitalProcessor
 {
-    const ALLOWED_TYPES = [
+    public const ALLOWED_TYPES = [
         'heart_rate', 'spo2', 'temperature',
         'blood_pressure', 'steps', 'sleep_state', 'hrv',
         'calories', 'stress',
@@ -65,39 +65,46 @@ class VitalProcessor
         $normalized = [];
 
         foreach ($readings as $index => $raw) {
-            if (empty($raw['timestamp'])) {
+            // Band uses "date" (format: 2026.08.01 05:01:18) or "timestamp"
+            $tsRaw = $raw['timestamp'] ?? $raw['date'] ?? null;
+            if (empty($tsRaw)) {
                 throw ValidationException::withMessages([
-                    "{$index}.timestamp" => ['timestamp is required.'],
+                    "{$index}" => ['timestamp or date is required.'],
                 ]);
             }
 
-            $ts       = Carbon::parse($raw['timestamp']);
-            $spo2At   = !empty($raw['spo2Date']) ? Carbon::parse($raw['spo2Date']) : $ts;
-            $bpAt     = !empty($raw['bpDate'])   ? Carbon::parse($raw['bpDate'])   : $ts;
-
-            $activityContext = $raw['activityContext'] ?? null;
-            $spo2Quality     = $raw['spo2Quality']     ?? 'good';
+            // Normalise band date format: dots → dashes so Carbon parses it
+            $ts     = Carbon::parse(str_replace('.', '-', $tsRaw));
+            $spo2At = !empty($raw['spo2Date']) ? Carbon::parse(str_replace('.', '-', $raw['spo2Date'])) : $ts;
+            $bpAt   = !empty($raw['bpDate'])   ? Carbon::parse(str_replace('.', '-', $raw['bpDate']))   : $ts;
 
             $scalars = [
-                ['field' => 'heartRate', 'type' => 'heart_rate',  'unit' => 'bpm',   'at' => $ts,     'float' => false],
-                ['field' => 'temp',      'type' => 'temperature', 'unit' => '°C',    'at' => $ts,     'float' => true],
-                ['field' => 'steps',     'type' => 'steps',       'unit' => 'steps', 'at' => $ts,     'float' => false],
-                ['field' => 'calories',  'type' => 'calories',    'unit' => 'kcal',  'at' => $ts,     'float' => true],
-                ['field' => 'spo2',      'type' => 'spo2',        'unit' => '%',     'at' => $spo2At, 'float' => false],
-                ['field' => 'stress',    'type' => 'stress',      'unit' => 'index', 'at' => $ts,     'float' => false],
-                ['field' => 'hrv',       'type' => 'hrv',         'unit' => 'ms',    'at' => $ts,     'float' => true],
+                ['fields' => ['heartRate'],               'type' => 'heart_rate',  'unit' => 'bpm',   'at' => $ts,     'float' => false],
+                ['fields' => ['temp'],                    'type' => 'temperature', 'unit' => '°C',    'at' => $ts,     'float' => true],
+                ['fields' => ['steps'],                   'type' => 'steps',       'unit' => 'steps', 'at' => $ts,     'float' => false],
+                ['fields' => ['calories'],                'type' => 'calories',    'unit' => 'kcal',  'at' => $ts,     'float' => true],
+                ['fields' => ['spo2', 'Blood_oxygen'],   'type' => 'spo2',        'unit' => '%',     'at' => $spo2At, 'float' => false],
+                ['fields' => ['stress'],                  'type' => 'stress',      'unit' => 'index', 'at' => $ts,     'float' => false],
+                ['fields' => ['hrv'],                     'type' => 'hrv',         'unit' => 'ms',    'at' => $ts,     'float' => true],
             ];
 
             foreach ($scalars as $m) {
-                $val = $raw[$m['field']] ?? 0;
-                if ($val <= 0) continue;
+                // Accept any of the listed field names the band might use
+                $val = null;
+                foreach ($m['fields'] as $field) {
+                    if (isset($raw[$field]) && $raw[$field] > 0) {
+                        $val = $raw[$field];
+                        break;
+                    }
+                }
+                if ($val === null) continue;
+
                 $normalized[] = [
-                    'type'             => $m['type'],
-                    'value'            => $m['float'] ? (float) $val : (int) $val,
-                    'unit'             => $m['unit'],
-                    'recorded_at'      => $m['at'],
-                    'activity_context' => $activityContext,
-                    'quality_flag'     => $m['type'] === 'spo2' ? $spo2Quality : 'good',
+                    'type'        => $m['type'],
+                    'value'       => $m['float'] ? (float) $val : (int) $val,
+                    'unit'        => $m['unit'],
+                    'recorded_at' => $m['at'],
+                    'quality_flag' => 'good',
                 ];
             }
 

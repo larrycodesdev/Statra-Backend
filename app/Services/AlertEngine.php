@@ -44,15 +44,32 @@ class AlertEngine
 
     private function evaluateSpo2(VitalReading $reading, Patient $patient): ?Alert
     {
-        $value = $this->numericValue($reading->value);
+        $value      = $this->numericValue($reading->value);
         $thresholds = self::THRESHOLDS['spo2'];
 
-        if ($value <= $thresholds['critical']) {
+        $isCritical = $value <= $thresholds['critical'];
+        $isWarning  = $value <= $thresholds['warning'];
+
+        if (!$isCritical && !$isWarning) {
+            return null;
+        }
+
+        // Band provides no quality indicator — require 2 consecutive low readings
+        // before firing to suppress wrist-fit noise on SCD patients.
+        $previous = $patient->vitalReadings()
+            ->where('type', 'spo2')
+            ->where('id', '<', $reading->id)
+            ->orderByDesc('recorded_at')
+            ->value('value');
+
+        $prevValue = $previous !== null ? $this->numericValue($previous) : 100;
+
+        if ($isCritical && $prevValue <= $thresholds['critical']) {
             return $this->createAlert($patient, $reading, 'spo2_low', 1,
                 "Critical: SpO2 is {$value}% — dangerously low oxygen saturation.");
         }
 
-        if ($value <= $thresholds['warning']) {
+        if ($isWarning && $prevValue <= $thresholds['warning']) {
             return $this->createAlert($patient, $reading, 'spo2_low', 2,
                 "Warning: SpO2 is {$value}% — below safe threshold.");
         }
