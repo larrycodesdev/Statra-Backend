@@ -11,7 +11,7 @@ class VitalProcessor
     public const ALLOWED_TYPES = [
         'heart_rate', 'spo2', 'temperature',
         'blood_pressure', 'steps', 'sleep_state', 'hrv',
-        'calories', 'stress',
+        'calories', 'stress', 'vascular_age',
     ];
 
     public function validateAndNormalize(array $readings): array
@@ -86,6 +86,7 @@ class VitalProcessor
                 ['fields' => ['spo2', 'Blood_oxygen'],   'type' => 'spo2',        'unit' => '%',     'at' => $spo2At, 'float' => false],
                 ['fields' => ['stress'],                  'type' => 'stress',      'unit' => 'index', 'at' => $ts,     'float' => false],
                 ['fields' => ['hrv'],                     'type' => 'hrv',         'unit' => 'ms',    'at' => $ts,     'float' => true],
+                ['fields' => ['vascularAging'],           'type' => 'vascular_age', 'unit' => 'years', 'at' => $ts,     'float' => false],
             ];
 
             foreach ($scalars as $m) {
