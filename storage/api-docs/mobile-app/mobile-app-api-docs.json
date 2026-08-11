@@ -2869,6 +2869,205 @@
           }
         }
       }
+    },
+    "/api/v1/patient/vitals/baseline-score": {
+      "get": {
+        "tags": [
+          "Patient Vitals"
+        ],
+        "summary": "Get personalised health baseline score \u2014 calibration status + latest composite score",
+        "description": "Returns the patient's personalised EWMA baseline score computed by the baseline engine.\n\n**calibration_status** values:\n- `calibrating` \u2014 fewer than 28 days of data. Score is not yet computed. Show a 'Calibrating...' state in the app.\n- `active` \u2014 baseline is live. `latest_score` is populated.\n- `stale` \u2014 no readings received for >12 hours. Score paused. Show a 'No band data' warning.\n\n**latest_score.status** maps to the app health indicator:\n- `stable` \u2192 Green\n- `watch` \u2192 Yellow\n- `elevated` \u2192 Amber\n- `urgent` \u2192 Red\n\n**outreach_recommended** \u2014 if `true`, the patient's readings have hit a clinical trigger (e.g. fever \u226538.5\u00b0C, sustained SpO2 drop, or elevated score for \u22654 hours). Show a prompt to contact their care team.",
+        "operationId": "patientBaselineScore",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Baseline score",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "calibration_status": {
+                          "type": "string",
+                          "enum": [
+                            "calibrating",
+                            "active",
+                            "stale"
+                          ],
+                          "example": "active",
+                          "description": "calibrating = no score yet. active = score live. stale = no band data >12h."
+                        },
+                        "latest_score": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "null while calibration_status is 'calibrating'",
+                          "properties": {
+                            "computed_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "stable",
+                                "watch",
+                                "elevated",
+                                "urgent"
+                              ],
+                              "description": "Maps to Green / Yellow / Amber / Red in the app"
+                            },
+                            "total_score": {
+                              "type": "number",
+                              "example": 3.42,
+                              "description": "Weighted composite deviation score"
+                            },
+                            "confidence": {
+                              "type": "string",
+                              "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                              ]
+                            },
+                            "outreach_recommended": {
+                              "type": "boolean",
+                              "example": false,
+                              "description": "true = show prompt to contact care team"
+                            },
+                            "outreach_reason": {
+                              "type": "string",
+                              "nullable": true,
+                              "example": "SpO2 \u22652.5 SD below personal baseline for \u226530 consecutive minutes"
+                            },
+                            "signals": {
+                              "type": "object",
+                              "description": "Per-signal z-score and weighted contribution",
+                              "properties": {
+                                "temperature": {
+                                  "type": "object",
+                                  "properties": {
+                                    "z": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": 1.2
+                                    },
+                                    "contribution": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": 3.6
+                                    }
+                                  }
+                                },
+                                "spo2": {
+                                  "type": "object",
+                                  "properties": {
+                                    "z": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": -0.4
+                                    },
+                                    "contribution": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": 0.0
+                                    }
+                                  }
+                                },
+                                "heart_rate": {
+                                  "type": "object",
+                                  "properties": {
+                                    "z": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": 0.8
+                                    },
+                                    "contribution": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": 0.0
+                                    }
+                                  }
+                                },
+                                "hrv": {
+                                  "type": "object",
+                                  "properties": {
+                                    "z": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": -1.1
+                                    },
+                                    "contribution": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": 2.2
+                                    }
+                                  }
+                                },
+                                "activity": {
+                                  "type": "object",
+                                  "properties": {
+                                    "z": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": null
+                                    },
+                                    "contribution": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "example": null
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "baselines": {
+                          "type": "object",
+                          "description": "Per-signal rolling mean and standard deviation \u2014 the patient's personal normal range",
+                          "example": {
+                            "heart_rate": [
+                              {
+                                "activity_context": "any",
+                                "rolling_mean": 74.3,
+                                "rolling_stddev": 5.2,
+                                "baseline_confidence": "high",
+                                "sample_count": 5820,
+                                "last_updated_at": "2026-08-11T06:00:00.000000Z"
+                              }
+                            ],
+                            "spo2": [
+                              {
+                                "activity_context": "any",
+                                "rolling_mean": 96.8,
+                                "rolling_stddev": 1.1,
+                                "baseline_confidence": "high",
+                                "sample_count": 4200,
+                                "last_updated_at": "2026-08-11T06:00:00.000000Z"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
