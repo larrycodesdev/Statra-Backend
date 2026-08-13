@@ -50,6 +50,23 @@ class BaselineController extends Controller
             ->get(['signal_type', 'activity_context', 'rolling_mean', 'rolling_stddev', 'baseline_confidence', 'sample_count', 'last_updated_at'])
             ->groupBy('signal_type');
 
+        // 7-day history for bar chart — one entry per day, latest score that day
+        $historyRows = $patient->compositeDeviationScores()
+            ->where('computed_at', '>=', now()->subDays(7))
+            ->orderBy('computed_at')
+            ->get(['computed_at', 'total_score', 'status', 'outreach_recommended']);
+
+        $history = $historyRows
+            ->groupBy(fn($r) => \Carbon\Carbon::parse($r->computed_at)->toDateString())
+            ->map(fn($group) => $group->last())
+            ->values()
+            ->map(fn($r) => [
+                'date'                 => \Carbon\Carbon::parse($r->computed_at)->toDateString(),
+                'total_score'          => round($r->total_score, 2),
+                'status'               => $r->status,
+                'outreach_recommended' => (bool) $r->outreach_recommended,
+            ]);
+
         return ApiResponse::success([
             'calibration_status' => $patient->calibration_status,
             'latest_score'       => $latest ? [
@@ -57,7 +74,7 @@ class BaselineController extends Controller
                 'status'               => $latest->status,
                 'total_score'          => round($latest->total_score, 2),
                 'confidence'           => $latest->confidence,
-                'outreach_recommended' => $latest->outreach_recommended,
+                'outreach_recommended' => (bool) $latest->outreach_recommended,
                 'outreach_reason'      => $latest->outreach_reason,
                 'signals'              => [
                     'temperature' => ['z' => $latest->temp_z,     'contribution' => $latest->temp_contribution],
@@ -67,7 +84,8 @@ class BaselineController extends Controller
                     'activity'    => ['z' => $latest->activity_z, 'contribution' => $latest->activity_contribution],
                 ],
             ] : null,
-            'baselines' => $baselines,
+            'baselines'          => $baselines,
+            'score_history'      => $history,
         ]);
     }
 }

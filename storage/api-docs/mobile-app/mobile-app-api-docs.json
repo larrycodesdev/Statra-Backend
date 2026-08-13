@@ -2875,8 +2875,8 @@
         "tags": [
           "Patient Vitals"
         ],
-        "summary": "Get personalised health baseline score \u2014 calibration status + latest composite score",
-        "description": "Returns the patient's personalised EWMA baseline score computed by the baseline engine.\n\n**calibration_status** values:\n- `calibrating` \u2014 fewer than 28 days of data. Score is not yet computed. Show a 'Calibrating...' state in the app.\n- `active` \u2014 baseline is live. `latest_score` is populated.\n- `stale` \u2014 no readings received for >12 hours. Score paused. Show a 'No band data' warning.\n\n**latest_score.status** maps to the app health indicator:\n- `stable` \u2192 Green\n- `watch` \u2192 Yellow\n- `elevated` \u2192 Amber\n- `urgent` \u2192 Red\n\n**outreach_recommended** \u2014 if `true`, the patient's readings have hit a clinical trigger (e.g. fever \u226538.5\u00b0C, sustained SpO2 drop, or elevated score for \u22654 hours). Show a prompt to contact their care team.",
+        "summary": "Health dashboard data \u2014 condition card, risk level, signals, and 7-day bar chart in one call",
+        "description": "Single endpoint that powers the entire health dashboard screen.\n\n**calibration_status:**\n- `calibrating` \u2014 <28 days of data. `latest_score` is null. Show 'Calibrating...' state.\n- `active` \u2014 baseline live. All fields populated.\n- `stale` \u2014 no band readings for >12 hours. Show 'No band data' warning.\n\n**latest_score.status \u2192 Condition card colour:**\n- `stable` \u2192 Green\n- `watch` \u2192 Yellow\n- `elevated` \u2192 Amber\n- `urgent` \u2192 Red\n\n**Condition percentage:** compute client-side \u2192 `(total_score / 15 * 100).clamp(0, 100)`\n\n**outreach_recommended: true** \u2192 show 'Contact your care team' banner.\n\n**signals** \u2192 individual z-scores for O2/Temp/HR labels in the Risk Level card:\n- z between -1 and 1 \u2192 'Normal'\n- z between 1 and 2 \u2192 'Watch'\n- z > 2 \u2192 'High' / z < -2 \u2192 'Low'\n\n**score_history** \u2192 7-day bar chart. One entry per day (latest score that day). Days with no data are omitted \u2014 handle sparse arrays.\n\nPoll on app foreground or every 30 minutes \u2014 the engine runs every 30 min.",
         "operationId": "patientBaselineScore",
         "security": [
           {
@@ -2885,7 +2885,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Baseline score",
+            "description": "Full health dashboard data",
             "content": {
               "application/json": {
                 "schema": {
@@ -2905,13 +2905,12 @@
                             "active",
                             "stale"
                           ],
-                          "example": "active",
-                          "description": "calibrating = no score yet. active = score live. stale = no band data >12h."
+                          "example": "active"
                         },
                         "latest_score": {
                           "type": "object",
                           "nullable": true,
-                          "description": "null while calibration_status is 'calibrating'",
+                          "description": "null when calibration_status is 'calibrating'",
                           "properties": {
                             "computed_at": {
                               "type": "string",
@@ -2925,12 +2924,12 @@
                                 "elevated",
                                 "urgent"
                               ],
-                              "description": "Maps to Green / Yellow / Amber / Red in the app"
+                              "description": "Drives the condition card colour and Overall Risk Level badge"
                             },
                             "total_score": {
                               "type": "number",
-                              "example": 3.42,
-                              "description": "Weighted composite deviation score"
+                              "example": 2.14,
+                              "description": "Raw weighted score 0\u201315. Convert to %: (total_score / 15 * 100).clamp(0,100)"
                             },
                             "confidence": {
                               "type": "string",
@@ -2943,7 +2942,7 @@
                             "outreach_recommended": {
                               "type": "boolean",
                               "example": false,
-                              "description": "true = show prompt to contact care team"
+                              "description": "true \u2192 show Contact care team banner"
                             },
                             "outreach_reason": {
                               "type": "string",
@@ -2952,7 +2951,7 @@
                             },
                             "signals": {
                               "type": "object",
-                              "description": "Per-signal z-score and weighted contribution",
+                              "description": "Per-signal z-scores. Use for O2/Temp/HR Normal labels. |z|<1=Normal, 1-2=Watch, >2=High/Low",
                               "properties": {
                                 "temperature": {
                                   "type": "object",
@@ -2960,12 +2959,11 @@
                                     "z": {
                                       "type": "number",
                                       "nullable": true,
-                                      "example": 1.2
+                                      "example": 0.4
                                     },
                                     "contribution": {
                                       "type": "number",
-                                      "nullable": true,
-                                      "example": 3.6
+                                      "nullable": true
                                     }
                                   }
                                 },
@@ -2975,12 +2973,11 @@
                                     "z": {
                                       "type": "number",
                                       "nullable": true,
-                                      "example": -0.4
+                                      "example": -0.2
                                     },
                                     "contribution": {
                                       "type": "number",
-                                      "nullable": true,
-                                      "example": 0.0
+                                      "nullable": true
                                     }
                                   }
                                 },
@@ -2990,12 +2987,11 @@
                                     "z": {
                                       "type": "number",
                                       "nullable": true,
-                                      "example": 0.8
+                                      "example": 0.6
                                     },
                                     "contribution": {
                                       "type": "number",
-                                      "nullable": true,
-                                      "example": 0.0
+                                      "nullable": true
                                     }
                                   }
                                 },
@@ -3005,12 +3001,11 @@
                                     "z": {
                                       "type": "number",
                                       "nullable": true,
-                                      "example": -1.1
+                                      "example": -0.5
                                     },
                                     "contribution": {
                                       "type": "number",
-                                      "nullable": true,
-                                      "example": 2.2
+                                      "nullable": true
                                     }
                                   }
                                 },
@@ -3024,8 +3019,7 @@
                                     },
                                     "contribution": {
                                       "type": "number",
-                                      "nullable": true,
-                                      "example": null
+                                      "nullable": true
                                     }
                                   }
                                 }
@@ -3035,29 +3029,83 @@
                         },
                         "baselines": {
                           "type": "object",
-                          "description": "Per-signal rolling mean and standard deviation \u2014 the patient's personal normal range",
-                          "example": {
-                            "heart_rate": [
-                              {
-                                "activity_context": "any",
-                                "rolling_mean": 74.3,
-                                "rolling_stddev": 5.2,
-                                "baseline_confidence": "high",
-                                "sample_count": 5820,
-                                "last_updated_at": "2026-08-11T06:00:00.000000Z"
+                          "description": "Patient's personal rolling mean and stddev per signal"
+                        },
+                        "score_history": {
+                          "type": "array",
+                          "description": "Last 7 days \u2014 one entry per day for the bar chart. Oldest first. Days with no data omitted.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "date": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2026-08-07"
+                              },
+                              "total_score": {
+                                "type": "number",
+                                "example": 1.2
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "stable",
+                                  "watch",
+                                  "elevated",
+                                  "urgent"
+                                ],
+                                "description": "Use to colour each bar"
+                              },
+                              "outreach_recommended": {
+                                "type": "boolean",
+                                "example": false
                               }
-                            ],
-                            "spo2": [
-                              {
-                                "activity_context": "any",
-                                "rolling_mean": 96.8,
-                                "rolling_stddev": 1.1,
-                                "baseline_confidence": "high",
-                                "sample_count": 4200,
-                                "last_updated_at": "2026-08-11T06:00:00.000000Z"
-                              }
-                            ]
-                          }
+                            }
+                          },
+                          "example": [
+                            {
+                              "date": "2026-08-07",
+                              "total_score": 1.2,
+                              "status": "stable",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-08",
+                              "total_score": 2.5,
+                              "status": "watch",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-09",
+                              "total_score": 1.8,
+                              "status": "stable",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-10",
+                              "total_score": 5.9,
+                              "status": "elevated",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-11",
+                              "total_score": 3.1,
+                              "status": "watch",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-12",
+                              "total_score": 1.4,
+                              "status": "stable",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-13",
+                              "total_score": 2.14,
+                              "status": "stable",
+                              "outreach_recommended": false
+                            }
+                          ]
                         }
                       }
                     }
