@@ -28,6 +28,7 @@ Dependencies: pip install pyodbc python-dotenv
 
 import os
 import math
+import time
 import pyodbc
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -75,7 +76,7 @@ PERSIST_ELEV_SCORE = 5.0   # §7.5 — elevated threshold
 
 # ── DB connection ─────────────────────────────────────────────────────────────
 
-def get_connection():
+def get_connection(retries: int = 4, delay: int = 40):
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
         f"SERVER={os.environ['DB_HOST']},1433;"
@@ -83,8 +84,16 @@ def get_connection():
         f"UID={os.environ['DB_USERNAME']};"
         f"PWD={os.environ['DB_PASSWORD']};"
         "Encrypt=yes;TrustServerCertificate=no;"
+        "Connection Timeout=30;"
     )
-    return pyodbc.connect(conn_str)
+    for attempt in range(1, retries + 1):
+        try:
+            return pyodbc.connect(conn_str)
+        except pyodbc.OperationalError as e:
+            if attempt == retries:
+                raise
+            print(f"  DB connection attempt {attempt} failed — Azure may be waking up. Retrying in {delay}s...")
+            time.sleep(delay)
 
 
 # ── Age group — §4.1 ─────────────────────────────────────────────────────────
