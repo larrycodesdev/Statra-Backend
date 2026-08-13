@@ -3068,6 +3068,137 @@
           }
         }
       }
+    },
+    "/api/v1/patient/vitals/score-history": {
+      "get": {
+        "tags": [
+          "Patient Vitals"
+        ],
+        "summary": "Get daily health score history \u2014 use for the 7-day bar chart",
+        "description": "Returns one score entry per calendar day (the latest score that day). Default is 7 days. Use the `days` query param for a different range (max 30).",
+        "operationId": "patientScoreHistory",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Number of days to return (1\u201330). Default 7.",
+            "schema": {
+              "type": "integer",
+              "default": 7,
+              "minimum": 1,
+              "maximum": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Score history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "days": {
+                          "type": "integer",
+                          "example": 7
+                        },
+                        "history": {
+                          "type": "array",
+                          "description": "One entry per day, oldest first. Days with no score are omitted (patient was calibrating or band was offline).",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "date": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2026-08-07"
+                              },
+                              "total_score": {
+                                "type": "number",
+                                "example": 2.14
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "stable",
+                                  "watch",
+                                  "elevated",
+                                  "urgent"
+                                ],
+                                "description": "Use this to colour each bar"
+                              },
+                              "outreach_recommended": {
+                                "type": "boolean",
+                                "example": false
+                              }
+                            }
+                          },
+                          "example": [
+                            {
+                              "date": "2026-08-07",
+                              "total_score": 1.2,
+                              "status": "stable",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-08",
+                              "total_score": 2.5,
+                              "status": "watch",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-09",
+                              "total_score": 1.8,
+                              "status": "stable",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-10",
+                              "total_score": 5.9,
+                              "status": "elevated",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-11",
+                              "total_score": 3.1,
+                              "status": "watch",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-12",
+                              "total_score": 1.4,
+                              "status": "stable",
+                              "outreach_recommended": false
+                            },
+                            {
+                              "date": "2026-08-13",
+                              "total_score": 2.14,
+                              "status": "stable",
+                              "outreach_recommended": false
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

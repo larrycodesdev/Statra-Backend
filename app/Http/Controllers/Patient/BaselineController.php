@@ -9,6 +9,35 @@ use Illuminate\Http\Request;
 
 class BaselineController extends Controller
 {
+    public function scoreHistory(Request $request): JsonResponse
+    {
+        $days = (int) $request->query('days', 7);
+        $days = min(max($days, 1), 30);
+
+        $patient = $request->user()->patient;
+
+        $rows = $patient->compositeDeviationScores()
+            ->where('computed_at', '>=', now()->subDays($days))
+            ->orderBy('computed_at')
+            ->get(['computed_at', 'total_score', 'status', 'outreach_recommended']);
+
+        // One entry per day — take the latest score for each calendar day
+        $byDay = $rows->groupBy(fn($r) => \Carbon\Carbon::parse($r->computed_at)->toDateString())
+            ->map(fn($group) => $group->last())
+            ->values()
+            ->map(fn($r) => [
+                'date'                 => \Carbon\Carbon::parse($r->computed_at)->toDateString(),
+                'total_score'          => round($r->total_score, 2),
+                'status'               => $r->status,
+                'outreach_recommended' => (bool) $r->outreach_recommended,
+            ]);
+
+        return ApiResponse::success([
+            'days'    => $days,
+            'history' => $byDay,
+        ]);
+    }
+
     public function score(Request $request): JsonResponse
     {
         $patient = $request->user()->patient;

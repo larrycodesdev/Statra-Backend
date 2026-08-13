@@ -56,6 +56,7 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     Route::post('vitals/sync',           [VitalsController::class,  'sync']);
     Route::get('vitals',                 [VitalsController::class,  'index']);
     Route::get('vitals/baseline-score',  [BaselineController::class, 'score']);
+    Route::get('vitals/score-history',   [BaselineController::class, 'scoreHistory']);
 
     // Alerts & Notifications
     Route::get('alerts',                          [AlertController::class, 'index']);
