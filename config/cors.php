@@ -25,6 +25,7 @@ return [
         'https://statra.health',
         'https://www.statra.health',
         'https://statrahealth.com',
+        'https://statra-website-beta.vercel.app',
         'https://www.statrahealth.com',
         'https://admin.statrahealth.com',
         'https://statra-website.vercel.app',
