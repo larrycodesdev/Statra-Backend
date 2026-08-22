@@ -1,9 +1,9 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "STATRA — Website API",
+        "title": "STATRA \u2014 Website API",
         "version": "1.0.0",
-        "description": "Public API endpoints for the STATRA website (statra.health).\n\nAll endpoints are unauthenticated — no Bearer token required.",
+        "description": "Public API endpoints for the STATRA website (statra.health).\n\nAll endpoints are unauthenticated \u2014 no Bearer token required.",
         "contact": {
             "email": "hello@statra.health"
         }
@@ -18,12 +18,18 @@
         {
             "name": "Contact",
             "description": "Contact form submission"
+        },
+        {
+            "name": "Subscription",
+            "description": "Subscription checkout initialisation"
         }
     ],
     "paths": {
         "/api/v1/website/contact": {
             "post": {
-                "tags": ["Contact"],
+                "tags": [
+                    "Contact"
+                ],
                 "summary": "Submit a contact form message",
                 "description": "Saves the message to the database, sends a notification email to the Statra team at hello@statra.health (with reply-to set to the sender), and sends a confirmation email to the sender.",
                 "requestBody": {
@@ -31,7 +37,11 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": ["full_name", "email", "message"],
+                                "required": [
+                                    "full_name",
+                                    "email",
+                                    "message"
+                                ],
                                 "properties": {
                                     "full_name": {
                                         "type": "string",
@@ -61,7 +71,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Message received — confirmation emails sent to both the team and the sender",
+                        "description": "Message received \u2014 confirmation emails sent to both the team and the sender",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -85,19 +95,91 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error — missing or invalid fields",
+                        "description": "Validation error \u2014 missing or invalid fields",
                         "content": {
                             "application/json": {
                                 "example": {
                                     "success": false,
                                     "message": "Validation failed.",
                                     "errors": {
-                                        "email": ["The email field must be a valid email address."],
-                                        "message": ["The message field is required."]
+                                        "email": [
+                                            "The email field must be a valid email address."
+                                        ],
+                                        "message": [
+                                            "The message field is required."
+                                        ]
                                     }
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/api/v1/website/subscription/init": {
+            "post": {
+                "tags": [
+                    "Subscription"
+                ],
+                "summary": "Initialise subscription checkout",
+                "description": "Called by the website after the user arrives via `subscribe_url?token=xxx`. Validates the token, identifies the user, and returns a Paystack payment URL. Redirect the user to `payment_url` to complete payment.\n\nThe token is single-use and expires in 15 minutes.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token",
+                                    "callback_url"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string",
+                                        "description": "Token from the subscribe_url query param",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                    },
+                                    "callback_url": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "description": "URL Paystack redirects to after payment (your success page)",
+                                        "example": "https://statra.health/subscribe/success"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Paystack checkout initialised \u2014 redirect user to `payment_url`",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "payment_url": "https://checkout.paystack.com/xxx",
+                                        "reference": "ref_abc123",
+                                        "access_code": "ac_xxx",
+                                        "user_name": "John Doe",
+                                        "user_email": "john@example.com"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Token invalid or expired",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "success": false,
+                                    "message": "Invalid or expired token. Please go back to the app and try again."
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Paystack initialisation failed"
                     }
                 }
             }
