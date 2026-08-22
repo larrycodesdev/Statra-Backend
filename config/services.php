@@ -63,4 +63,10 @@ return [
         'base_url'        => 'https://api.korapay.com/merchant/api/v1',
     ],
 
+    'paystack' => [
+        'secret_key'   => env('PAYSTACK_SECRET_KEY'),
+        'plan_code'    => env('PAYSTACK_PLAN_CODE'),
+        'plan_amount'  => env('PAYSTACK_PLAN_AMOUNT', 1000000), // ₦10,000 in kobo
+    ],
+
 ];

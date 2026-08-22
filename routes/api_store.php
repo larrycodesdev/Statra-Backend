@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Store\AdminAuthController;
 use App\Http\Controllers\Store\AdminOrderController;
+use App\Http\Controllers\Store\AdminUserController;
 use App\Http\Controllers\Store\AffiliateController;
 use App\Http\Controllers\Store\OrderController;
 use App\Http\Controllers\Store\PaymentController;
@@ -33,4 +34,7 @@ Route::middleware('store.admin')->prefix('admin')->group(function () {
     Route::get('orders/{orderNumber}',           [AdminOrderController::class, 'show']);
     Route::patch('orders/{orderNumber}/status',  [AdminOrderController::class, 'updateStatus']);
     Route::patch('orders/{orderNumber}/issue',   [AdminOrderController::class, 'updateIssue']);
+
+    // User management — tester account toggle
+    Route::patch('users/{id}/tester', [AdminUserController::class, 'toggleTester']);
 });

@@ -20,7 +20,7 @@ class User extends Authenticatable
         'first_name', 'last_name', 'username',
         'email', 'password',
         'role', 'phone', 'avatar', 'fcm_token',
-        'hospital_id', 'approval_status',
+        'hospital_id', 'approval_status', 'is_tester',
         'invite_token', 'invite_expires_at',
         'password_reset_otp', 'password_reset_otp_expires_at',
     ];
@@ -78,6 +78,24 @@ class User extends Authenticatable
     public function hospital(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Hospital::class);
+    }
+
+    public function subscription(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Subscription::class);
+    }
+
+    public function subscriptionInvoices(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SubscriptionInvoice::class);
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        if ($this->is_tester) {
+            return true;
+        }
+        return $this->subscription?->isActive() ?? false;
     }
 
     public function isPatient(): bool  { return $this->role === 'patient'; }

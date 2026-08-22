@@ -5,11 +5,13 @@ use App\Http\Controllers\Patient\HealthTrackerController;
 use App\Http\Controllers\Patient\AppointmentController;
 use App\Http\Controllers\Patient\AuthController;
 use App\Http\Controllers\Patient\DeviceController;
+use App\Http\Controllers\Patient\HealthDataExportController;
 use App\Http\Controllers\Patient\MedicationController;
 use App\Http\Controllers\Patient\NotificationController;
 use App\Http\Controllers\Patient\PainLogController;
 use App\Http\Controllers\Patient\ProfileController;
 use App\Http\Controllers\Patient\SettingsController;
+use App\Http\Controllers\Patient\SubscriptionController;
 use App\Http\Controllers\Patient\SymptomController;
 use App\Http\Controllers\Patient\TriggerController;
 use App\Http\Controllers\Patient\TrendsController;
@@ -101,4 +103,15 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
 
     // Appointments
     Route::get('appointments', [AppointmentController::class, 'index']);
+
+    // Subscription
+    Route::prefix('subscription')->group(function () {
+        Route::get('status',          [SubscriptionController::class, 'status']);
+        Route::get('billing-history', [SubscriptionController::class, 'billingHistory']);
+        Route::post('cancel',         [SubscriptionController::class, 'cancel']);
+        Route::post('token',          [SubscriptionController::class, 'generateToken']);
+    });
+
+    // Health data export — always accessible regardless of subscription status
+    Route::get('health-data/export', [HealthDataExportController::class, 'export']);
 });
