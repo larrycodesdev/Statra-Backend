@@ -575,6 +575,34 @@
                                                     "items": {
                                                         "type": "object"
                                                     }
+                                                },
+                                                "subscription": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "subscribed": {
+                                                            "type": "boolean",
+                                                            "example": true
+                                                        },
+                                                        "is_tester": {
+                                                            "type": "boolean",
+                                                            "example": false
+                                                        },
+                                                        "status": {
+                                                            "type": "string",
+                                                            "example": "active",
+                                                            "description": "none | active | past_due | cancelled | expired"
+                                                        },
+                                                        "expires_at": {
+                                                            "type": "string",
+                                                            "nullable": true,
+                                                            "example": "2026-09-22 10:00:00"
+                                                        },
+                                                        "next_billing_at": {
+                                                            "type": "string",
+                                                            "nullable": true,
+                                                            "example": "2026-09-22 10:00:00"
+                                                        }
+                                                    }
                                                 }
                                             },
                                             "type": "object"

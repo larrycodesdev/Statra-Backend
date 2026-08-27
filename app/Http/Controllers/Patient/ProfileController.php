@@ -15,8 +15,9 @@ class ProfileController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $user    = $request->user()->load('patient.assignedDoctor.doctor', 'patient.assignedNurse', 'patient.emergencyContacts');
+        $user    = $request->user()->load('patient.assignedDoctor.doctor', 'patient.assignedNurse', 'patient.emergencyContacts', 'subscription');
         $patient = $user->patient;
+        $sub     = $user->subscription;
 
         return ApiResponse::success([
             // Personal info
@@ -50,6 +51,15 @@ class ProfileController extends Controller
 
             // Care team
             'care_team' => $this->buildCareTeam($patient),
+
+            // Subscription
+            'subscription' => [
+                'subscribed'      => $user->hasActiveSubscription(),
+                'is_tester'       => (bool) $user->is_tester,
+                'status'          => $user->is_tester ? 'active' : ($sub?->status ?? 'none'),
+                'expires_at'      => $sub?->expires_at?->toDateTimeString(),
+                'next_billing_at' => $sub?->next_billing_at?->toDateTimeString(),
+            ],
         ]);
     }
 
