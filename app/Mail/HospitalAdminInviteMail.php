@@ -22,13 +22,13 @@ class HospitalAdminInviteMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('hello@statra.health', 'Statra'),
-            subject: "You've been added as admin on Statra",
+            from: new Address('hello@statra.health', 'Statra Health'),
+            subject: "You've been added as a Hospital Admin on Statra",
         );
     }
 
     public function content(): Content
     {
-        return new Content(text: 'emails.hospital-admin-invite');
+        return new Content(html: 'emails.hospital-admin-invite');
     }
 }

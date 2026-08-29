@@ -32,7 +32,7 @@
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1><span>STATRA</span> — SCD Wellness</h1>
+      <h1><span>STATRA</span> Check-in</h1>
       <p>Weekly Summary &bull; {{ $stats['week_range'] }}</p>
     </div>
     <div class="body">
@@ -98,8 +98,8 @@
       </div>
     </div>
     <div class="footer">
-      You're receiving this weekly summary because your STATRA account has email notifications enabled.<br>
-      &copy; {{ date('Y') }} SCD Wellness Team
+      You're receiving this because weekly summaries are enabled on your STATRA Check-in account.<br>
+      &copy; {{ date('Y') }} Statra Health &mdash; statrahealth.com
     </div>
   </div>
 </body>

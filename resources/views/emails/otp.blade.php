@@ -28,7 +28,7 @@
 
     <div class="header">
       <h1><span>STATRA</span> Health</h1>
-      <p>SCD Wellness Platform</p>
+      <p>Mobile App &mdash; Account Verification</p>
     </div>
 
     <div class="body">

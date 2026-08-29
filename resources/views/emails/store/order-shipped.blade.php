@@ -55,8 +55,8 @@
       </div>
     </div>
     <div class="footer">
-      Questions? Reply to this email or contact us at support@scdwellness.app<br>
-      &copy; {{ date('Y') }} STATRA Health Platform
+      Questions? Reply to this email or visit <a href="https://statrahealth.com" style="color:#7c6af7;">statrahealth.com</a><br>
+      &copy; {{ date('Y') }} Statra Health &mdash; STATRA Band
     </div>
   </div>
 </body>

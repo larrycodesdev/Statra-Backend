@@ -21,7 +21,7 @@
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1><span>STATRA</span> — SCD Wellness</h1>
+      <h1><span>STATRA</span> Check-in</h1>
     </div>
     <div class="body">
       <p>Hi {{ $name }},</p>
@@ -36,7 +36,7 @@
     </div>
     <div class="footer">
       You're receiving this because daily reminders are enabled on your STATRA account.<br>
-      &copy; {{ date('Y') }} SCD Wellness Team
+      &copy; {{ date('Y') }} Statra Health &mdash; statrahealth.com
     </div>
   </div>
 </body>
