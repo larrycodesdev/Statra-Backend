@@ -21,13 +21,13 @@ class OtpMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('hello@statra.health', 'Statra'),
-            subject: 'Your SCD Wellness OTP Code',
+            from: new Address('hello@statra.health', 'Statra Health'),
+            subject: 'Your Statra Verification Code',
         );
     }
 
     public function content(): Content
     {
-        return new Content(text: 'emails.otp');
+        return new Content(html: 'emails.otp');
     }
 }
