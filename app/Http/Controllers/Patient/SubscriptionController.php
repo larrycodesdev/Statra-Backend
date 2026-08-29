@@ -108,8 +108,38 @@ class SubscriptionController extends Controller
         return response()->json(['success' => true, 'message' => 'Subscription cancelled successfully.']);
     }
 
+    // POST /api/v1/patient/subscription/checkout
+    // Website calls this when user is already logged in — returns Paystack payment URL directly
+    public function checkout(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->hasActiveSubscription()) {
+            return response()->json(['success' => false, 'message' => 'You already have an active subscription.'], 422);
+        }
+
+        $data = $request->validate([
+            'callback_url' => ['required', 'url'],
+        ]);
+
+        $result = $this->paystack->initializeSubscription($user->email, $data['callback_url']);
+
+        if (!$result) {
+            return response()->json(['success' => false, 'message' => 'Could not initialize payment. Please try again.'], 502);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'payment_url' => $result['authorization_url'],
+                'reference'   => $result['reference'],
+                'access_code' => $result['access_code'],
+            ],
+        ]);
+    }
+
     // POST /api/v1/patient/subscription/token
-    // App calls this, gets a short-lived token, then opens statra.health/subscribe?token=xxx
+    // App calls this, gets a short-lived token, then opens statrahealth.com/subscribe?token=xxx
     public function generateToken(Request $request): JsonResponse
     {
         $user  = $request->user();

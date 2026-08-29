@@ -8,6 +8,7 @@ use App\Http\Controllers\Patient\DeviceController;
 use App\Http\Controllers\Patient\HealthDataExportController;
 use App\Http\Controllers\Patient\MedicationController;
 use App\Http\Controllers\Patient\NotificationController;
+use App\Http\Controllers\Patient\OrderController;
 use App\Http\Controllers\Patient\PainLogController;
 use App\Http\Controllers\Patient\ProfileController;
 use App\Http\Controllers\Patient\SettingsController;
@@ -110,7 +111,12 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
         Route::get('billing-history', [SubscriptionController::class, 'billingHistory']);
         Route::post('cancel',         [SubscriptionController::class, 'cancel']);
         Route::post('token',          [SubscriptionController::class, 'generateToken']);
+        Route::post('checkout',       [SubscriptionController::class, 'checkout']);
     });
+
+    // Band orders (for website dashboard)
+    Route::get('orders',              [OrderController::class, 'index']);
+    Route::get('orders/{orderNumber}', [OrderController::class, 'show']);
 
     // Health data export — always accessible regardless of subscription status
     Route::get('health-data/export', [HealthDataExportController::class, 'export']);

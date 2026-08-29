@@ -3399,6 +3399,170 @@
                     }
                 }
             }
+        },
+        "/api/v1/patient/subscription/checkout": {
+            "post": {
+                "tags": [
+                    "Subscription"
+                ],
+                "summary": "Start subscription checkout (website \u2014 logged in)",
+                "description": "For website users already authenticated. Returns a Paystack `payment_url` \u2014 redirect the user there to pay. After payment Paystack webhook activates the subscription automatically.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "callback_url"
+                                ],
+                                "properties": {
+                                    "callback_url": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "example": "https://statrahealth.com/dashboard/subscription"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Paystack checkout URL ready \u2014 redirect user",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "payment_url": "https://checkout.paystack.com/xxx",
+                                        "reference": "ref_abc123",
+                                        "access_code": "ac_xxx"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Already has an active subscription"
+                    },
+                    "502": {
+                        "description": "Paystack initialisation failed"
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/orders": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get patient's band orders",
+                "description": "Returns all band orders placed with the logged-in user's email. Use this in the website dashboard to show order history and delivery status.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of orders",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "success": true,
+                                    "data": [
+                                        {
+                                            "order_number": "STR-2026-00001",
+                                            "status": "shipped",
+                                            "payment_status": "paid",
+                                            "issue": null,
+                                            "delay_note": null,
+                                            "timeline": [
+                                                {
+                                                    "status": "pending",
+                                                    "label": "Order placed",
+                                                    "date": "2026-08-01T10:00:00Z",
+                                                    "note": null
+                                                },
+                                                {
+                                                    "status": "shipped",
+                                                    "label": "Shipped",
+                                                    "date": "2026-08-05T14:00:00Z",
+                                                    "note": null
+                                                }
+                                            ],
+                                            "items": [
+                                                {
+                                                    "name": "Statra Band",
+                                                    "quantity": 1,
+                                                    "size": "M",
+                                                    "plan": "Band Only",
+                                                    "price": 149.0,
+                                                    "total": 149.0
+                                                }
+                                            ],
+                                            "pricing": {
+                                                "subtotal": 149.0,
+                                                "discount": 50.0,
+                                                "shipping": 0,
+                                                "total": 149.0,
+                                                "currency": "USD"
+                                            },
+                                            "delivery": {
+                                                "tracking_number": "TRK123456",
+                                                "courier": "DHL",
+                                                "shipped_at": "2026-08-05T14:00:00Z",
+                                                "estimated_dropoff": "2026-08-13"
+                                            },
+                                            "placed_at": "2026-08-01T10:00:00Z",
+                                            "rating": null,
+                                            "review_text": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/patient/orders/{orderNumber}": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get single band order",
+                "description": "Returns full detail for one order. Only returns the order if it belongs to the logged-in user's email.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "orderNumber",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "STR-2026-00001"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order detail"
+                    },
+                    "404": {
+                        "description": "Order not found or does not belong to this user"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -3600,6 +3764,10 @@
         {
             "name": "Health Data",
             "description": "Personal health data export"
+        },
+        {
+            "name": "Orders",
+            "description": "Patient band order history and tracking"
         }
     ]
 }
