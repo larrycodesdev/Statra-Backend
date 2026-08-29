@@ -40,6 +40,7 @@ class PaystackWebhookController extends Controller
         Log::info('Paystack webhook received', ['event' => $event]);
 
         match ($event) {
+            'charge.success'              => $this->handleChargeSuccess($data),
             'subscription.create'         => $this->handleSubscriptionCreate($data),
             'invoice.payment'             => $this->handleInvoicePayment($data),
             'invoice.payment_failed'      => $this->handleInvoicePaymentFailed($data),
@@ -48,6 +49,37 @@ class PaystackWebhookController extends Controller
         };
 
         return response('OK', 200);
+    }
+
+    private function handleChargeSuccess(array $data): void
+    {
+        // Only record invoice if this charge is linked to a subscription
+        if (empty($data['subscription_code'] ?? $data['plan']['plan_code'] ?? null)) {
+            return;
+        }
+
+        $email = $data['customer']['email'] ?? null;
+        $user  = $email ? User::where('email', $email)->first() : null;
+
+        if (!$user) {
+            return;
+        }
+
+        // Avoid duplicate invoice for the same reference
+        $reference = $data['reference'] ?? null;
+        if ($reference && SubscriptionInvoice::where('reference', $reference)->exists()) {
+            return;
+        }
+
+        SubscriptionInvoice::create([
+            'user_id'               => $user->id,
+            'paystack_invoice_code' => null,
+            'reference'             => $reference,
+            'amount'                => $data['amount'] ?? 0,
+            'currency'              => 'NGN',
+            'status'                => 'success',
+            'paid_at'               => now(),
+        ]);
     }
 
     private function handleSubscriptionCreate(array $data): void
