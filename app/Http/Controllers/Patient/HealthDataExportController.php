@@ -30,24 +30,25 @@ class HealthDataExportController extends Controller
             ]);
 
         $medications = $patient->medications()
-            ->get(['name', 'dosage', 'frequency', 'start_date', 'end_date', 'is_active'])
+            ->get(['name', 'dosage', 'frequency', 'begin_date', 'end_date', 'active'])
             ->map(fn ($m) => [
                 'name'       => $m->name,
                 'dosage'     => $m->dosage,
                 'frequency'  => $m->frequency,
-                'start_date' => $m->start_date,
-                'end_date'   => $m->end_date,
-                'is_active'  => $m->is_active,
+                'start_date' => $m->begin_date?->toDateString(),
+                'end_date'   => $m->end_date?->toDateString(),
+                'active'     => $m->active,
             ]);
 
         $symptoms = $patient->symptoms()
             ->orderByDesc('logged_at')
-            ->get(['name', 'severity', 'logged_at', 'notes'])
+            ->get(['symptom', 'severity', 'severity_label', 'logged_at', 'notes'])
             ->map(fn ($s) => [
-                'name'      => $s->name,
-                'severity'  => $s->severity,
-                'logged_at' => $s->logged_at,
-                'notes'     => $s->notes,
+                'symptom'        => $s->symptom,
+                'severity'       => $s->severity,
+                'severity_label' => $s->severity_label,
+                'logged_at'      => $s->logged_at,
+                'notes'          => $s->notes,
             ]);
 
         $scores = $patient->compositeDeviationScores()
