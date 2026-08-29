@@ -20,14 +20,24 @@ class PaystackWebhookController extends Controller
         $rawPayload = $request->getContent();
         $signature  = $request->header('X-Paystack-Signature', '');
 
+        Log::info('Paystack webhook hit', [
+            'sig_present' => !empty($signature),
+            'payload_len' => strlen($rawPayload),
+        ]);
+
         if (!$this->paystack->verifyWebhookSignature($rawPayload, $signature)) {
-            Log::warning('Paystack webhook signature mismatch');
+            Log::warning('Paystack webhook signature mismatch', [
+                'signature' => $signature,
+                'payload'   => $rawPayload,
+            ]);
             return response('Unauthorized', 401);
         }
 
         $payload = json_decode($rawPayload, true);
         $event   = $payload['event'] ?? '';
         $data    = $payload['data'] ?? [];
+
+        Log::info('Paystack webhook received', ['event' => $event]);
 
         match ($event) {
             'subscription.create'         => $this->handleSubscriptionCreate($data),
@@ -42,6 +52,8 @@ class PaystackWebhookController extends Controller
 
     private function handleSubscriptionCreate(array $data): void
     {
+        Log::info('Paystack subscription.create data', ['data' => $data]);
+
         $email    = $data['customer']['email'] ?? null;
         $user     = $email ? User::where('email', $email)->first() : null;
 

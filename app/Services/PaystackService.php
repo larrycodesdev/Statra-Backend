@@ -13,18 +13,34 @@ class PaystackService
     public function __construct()
     {
         $this->secretKey = config('services.paystack.secret_key');
+
+        Log::info('PaystackService booted', [
+            'key_set'    => !empty($this->secretKey),
+            'key_prefix' => $this->secretKey ? substr($this->secretKey, 0, 12) . '...' : 'NULL',
+            'plan_code'  => config('services.paystack.plan_code'),
+            'plan_amount' => config('services.paystack.plan_amount'),
+        ]);
     }
 
     public function initializeSubscription(string $email, string $callbackUrl): ?array
     {
+        $payload = [
+            'email'        => $email,
+            'amount'       => (int) config('services.paystack.plan_amount', 1000000),
+            'plan'         => config('services.paystack.plan_code'),
+            'callback_url' => $callbackUrl,
+            'currency'     => 'NGN',
+        ];
+
+        Log::info('Paystack init payload', $payload);
+
         $response = Http::withToken($this->secretKey)
-            ->post("{$this->baseUrl}/transaction/initialize", [
-                'email'        => $email,
-                'amount'       => (int) config('services.paystack.plan_amount', 1000000),
-                'plan'         => config('services.paystack.plan_code'),
-                'callback_url' => $callbackUrl,
-                'currency'     => 'NGN',
-            ]);
+            ->post("{$this->baseUrl}/transaction/initialize", $payload);
+
+        Log::info('Paystack init response', [
+            'status' => $response->status(),
+            'body'   => $response->json(),
+        ]);
 
         if (!$response->successful() || !$response->json('status')) {
             Log::error('Paystack subscription init failed', ['response' => $response->json()]);
