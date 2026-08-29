@@ -36,7 +36,7 @@
     </div>
     <div class="footer">
       You're receiving this because daily reminders are enabled on your STATRA account.<br>
-      &copy; {{ date('Y') }} Statra Health &mdash; statrahealth.com
+      &copy; {{ date('Y') }} Statra Health &mdash; statra.health
     </div>
   </div>
 </body>

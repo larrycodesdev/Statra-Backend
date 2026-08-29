@@ -99,7 +99,7 @@
     </div>
     <div class="footer">
       You're receiving this because weekly summaries are enabled on your STATRA Check-in account.<br>
-      &copy; {{ date('Y') }} Statra Health &mdash; statrahealth.com
+      &copy; {{ date('Y') }} Statra Health &mdash; statra.health
     </div>
   </div>
 </body>
