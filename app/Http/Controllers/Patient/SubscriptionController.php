@@ -117,7 +117,7 @@ class SubscriptionController extends Controller
 
         Cache::put("sub_token:{$token}", $user->id, now()->addMinutes(15));
 
-        $subscribeUrl = rtrim(config('app.frontend_url', 'https://statra.health'), '/') . '/subscribe?token=' . $token;
+        $subscribeUrl = rtrim(config('app.frontend_url', 'https://statrahealth.com'), '/') . '/subscribe?token=' . $token;
 
         return response()->json([
             'success' => true,
