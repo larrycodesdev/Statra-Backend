@@ -124,7 +124,14 @@ class AuthController extends Controller
                 return ApiResponse::error('Invalid Google token.', 401);
             }
 
-            $info      = $response->json();
+            $info = $response->json();
+
+            // Validate the token was issued for our web client, not some other Google app
+            $expectedAud = config('services.google.web_client_id');
+            if ($expectedAud && ($info['aud'] ?? '') !== $expectedAud) {
+                return ApiResponse::error('Invalid Google token.', 401);
+            }
+
             $email     = $info['email'];
             $firstName = $info['given_name'] ?? ($data['first_name'] ?? '');
             $lastName  = $info['family_name'] ?? ($data['last_name'] ?? '');
