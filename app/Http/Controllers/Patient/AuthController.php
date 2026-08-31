@@ -105,6 +105,13 @@ class AuthController extends Controller
             'fcm_token'  => ['sometimes', 'nullable', 'string'],
         ]);
 
+        \Illuminate\Support\Facades\Log::info('social_auth_attempt', [
+            'provider'    => $data['provider'],
+            'token_len'   => strlen($data['token']),
+            'token_start' => substr($data['token'], 0, 20),
+            'is_jwt'      => substr_count($data['token'], '.') === 2,
+        ]);
+
         // Firebase ID token path — mobile app signed in via Firebase Auth SDK
         if ($data['provider'] === 'firebase') {
             try {
@@ -213,6 +220,11 @@ class AuthController extends Controller
             $lastName  = $nameParts[1] ?? '';
             $avatar    = $socialUser->getAvatar();
         }
+
+        \Illuminate\Support\Facades\Log::info('social_auth_resolved', [
+            'provider' => $data['provider'],
+            'email'    => $email,
+        ]);
 
         $user = User::firstOrCreate(
             ['email' => $email],
