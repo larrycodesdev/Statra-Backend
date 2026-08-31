@@ -53,8 +53,11 @@ class PaystackWebhookController extends Controller
 
     private function handleChargeSuccess(array $data): void
     {
-        // Only record invoice if this charge is linked to a subscription
-        if (empty($data['subscription_code'] ?? $data['plan']['plan_code'] ?? null)) {
+        $metadata = $data['metadata'] ?? [];
+        $purpose  = is_array($metadata) ? ($metadata['purpose'] ?? '') : '';
+
+        // Only handle charges that were initiated as subscription payments
+        if ($purpose !== 'statra_subscription') {
             return;
         }
 
@@ -62,15 +65,18 @@ class PaystackWebhookController extends Controller
         $user  = $email ? User::where('email', $email)->first() : null;
 
         if (!$user) {
+            Log::warning('charge.success: user not found', ['email' => $email]);
             return;
         }
 
-        // Avoid duplicate invoice for the same reference
         $reference = $data['reference'] ?? null;
+
+        // Avoid duplicate invoice for the same reference
         if ($reference && SubscriptionInvoice::where('reference', $reference)->exists()) {
             return;
         }
 
+        // Record the payment invoice
         SubscriptionInvoice::create([
             'user_id'               => $user->id,
             'paystack_invoice_code' => null,
@@ -80,6 +86,21 @@ class PaystackWebhookController extends Controller
             'status'                => 'success',
             'paid_at'               => now(),
         ]);
+
+        // Create the recurring subscription anchored to this subscriber's date.
+        // start_date = 30 days from now → Paystack bills them monthly from their signup date.
+        $customerCode      = $data['customer']['customer_code'] ?? null;
+        $authorizationCode = $data['authorization']['authorization_code'] ?? null;
+
+        if ($customerCode && $authorizationCode) {
+            $this->paystack->createSubscription($customerCode, $authorizationCode);
+            // subscription.create webhook will fire next and store the subscription record
+        } else {
+            Log::warning('charge.success: missing customer_code or authorization_code', [
+                'customer_code'      => $customerCode,
+                'authorization_code' => $authorizationCode,
+            ]);
+        }
     }
 
     private function handleSubscriptionCreate(array $data): void

@@ -24,15 +24,16 @@ class PaystackService
 
     public function initializeSubscription(string $email, string $callbackUrl): ?array
     {
+        // No `plan` here — we charge a plain ₦10,000 transaction first.
+        // After charge.success fires we call createSubscription() with the
+        // customer's authorization_code + start_date = 30 days from now.
+        // This gives each subscriber their own billing anchor, not a shared plan anchor.
         $payload = [
             'email'        => $email,
             'amount'       => (int) config('services.paystack.plan_amount', 1000000),
-            'plan'         => config('services.paystack.plan_code'),
             'callback_url' => $callbackUrl,
             'currency'     => 'NGN',
-            // Anchor this subscriber's billing cycle to today so recurring charges
-            // happen exactly 30 days from signup, not on the plan's shared anchor date.
-            'start_date'   => now()->toIso8601String(),
+            'metadata'     => ['purpose' => 'statra_subscription'],
         ];
 
         Log::info('Paystack init payload', $payload);
@@ -47,6 +48,29 @@ class PaystackService
 
         if (!$response->successful() || !$response->json('status')) {
             Log::error('Paystack subscription init failed', ['response' => $response->json()]);
+            return null;
+        }
+
+        return $response->json('data');
+    }
+
+    public function createSubscription(string $customerCode, string $authorizationCode): ?array
+    {
+        $response = Http::withToken($this->secretKey)
+            ->post("{$this->baseUrl}/subscription", [
+                'customer'      => $customerCode,
+                'plan'          => config('services.paystack.plan_code'),
+                'authorization' => $authorizationCode,
+                'start_date'    => now()->addMonth()->toIso8601String(),
+            ]);
+
+        Log::info('Paystack create subscription response', [
+            'status' => $response->status(),
+            'body'   => $response->json(),
+        ]);
+
+        if (!$response->successful() || !$response->json('status')) {
+            Log::error('Paystack create subscription failed', ['response' => $response->json()]);
             return null;
         }
 
