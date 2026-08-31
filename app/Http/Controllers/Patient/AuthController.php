@@ -89,7 +89,7 @@ class AuthController extends Controller
     public function social(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'provider'   => ['required', 'in:firebase,google,apple,facebook'],
+            'provider'   => ['required', 'in:firebase,google,google_web,apple,facebook'],
             'token'      => ['required', 'string'],
             'first_name' => ['sometimes', 'string', 'max:100'],
             'last_name'  => ['sometimes', 'string', 'max:100'],
@@ -112,6 +112,23 @@ class AuthController extends Controller
             $firstName = $nameParts[0] ?? '';
             $lastName  = $nameParts[1] ?? '';
             $avatar    = $payload['picture'] ?? null;
+
+        } elseif ($data['provider'] === 'google_web') {
+            // Google One Tap / Sign-In button on website returns an ID token (JWT credential)
+            // Verified via Google's tokeninfo endpoint — different from Firebase (mobile) flow
+            $response = \Illuminate\Support\Facades\Http::get('https://oauth2.googleapis.com/tokeninfo', [
+                'id_token' => $data['token'],
+            ]);
+
+            if (!$response->successful() || !$response->json('email')) {
+                return ApiResponse::error('Invalid Google token.', 401);
+            }
+
+            $info      = $response->json();
+            $email     = $info['email'];
+            $firstName = $info['given_name'] ?? ($data['first_name'] ?? '');
+            $lastName  = $info['family_name'] ?? ($data['last_name'] ?? '');
+            $avatar    = $info['picture'] ?? null;
 
         } elseif ($data['provider'] === 'apple') {
             // Apple identity token path — name is NOT in the token (only provided on first sign-in)
