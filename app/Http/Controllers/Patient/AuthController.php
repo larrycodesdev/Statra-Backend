@@ -70,7 +70,16 @@ class AuthController extends Controller
 
         $user = User::where($field, $data['identifier'])->where('role', 'patient')->first();
 
-        if (!$user || !Hash::check($data['password'], $user->password)) {
+        if (!$user) {
+            return ApiResponse::error('Invalid credentials.', 401);
+        }
+
+        // Account was created via Google/Apple — no password set
+        if (is_null($user->password)) {
+            return ApiResponse::error('This account uses social sign-in (Google or Apple). Please sign in with Google or Apple instead.', 401);
+        }
+
+        if (!Hash::check($data['password'], $user->password)) {
             return ApiResponse::error('Invalid credentials.', 401);
         }
 
