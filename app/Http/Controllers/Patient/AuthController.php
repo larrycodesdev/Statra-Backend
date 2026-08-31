@@ -102,9 +102,10 @@ class AuthController extends Controller
             'token'      => ['required', 'string'],
             'first_name' => ['sometimes', 'string', 'max:100'],
             'last_name'  => ['sometimes', 'string', 'max:100'],
+            'fcm_token'  => ['sometimes', 'nullable', 'string'],
         ]);
 
-        // Firebase ID token path — used when mobile app signs in via Firebase Auth SDK
+        // Firebase ID token path — mobile app signed in via Firebase Auth SDK
         if ($data['provider'] === 'firebase') {
             try {
                 $payload = (new FirebaseTokenVerifier())->verify($data['token']);
@@ -121,6 +122,24 @@ class AuthController extends Controller
             $firstName = $nameParts[0] ?? '';
             $lastName  = $nameParts[1] ?? '';
             $avatar    = $payload['picture'] ?? null;
+
+        } elseif ($data['provider'] === 'google') {
+            // Native mobile Google Sign-In (Android / iOS SDK).
+            // The ID token's `aud` is the mobile OAuth client ID — different from the
+            // web client ID — so we skip the aud check and rely on tokeninfo alone.
+            $response = \Illuminate\Support\Facades\Http::get('https://oauth2.googleapis.com/tokeninfo', [
+                'id_token' => $data['token'],
+            ]);
+
+            if (!$response->successful() || !$response->json('email')) {
+                return ApiResponse::error('Invalid Google token.', 401);
+            }
+
+            $info      = $response->json();
+            $email     = $info['email'];
+            $firstName = $info['given_name'] ?? ($data['first_name'] ?? '');
+            $lastName  = $info['family_name'] ?? ($data['last_name'] ?? '');
+            $avatar    = $info['picture'] ?? null;
 
         } elseif ($data['provider'] === 'google_web') {
             // Google One Tap / Sign-In button on website returns an ID token (JWT credential)
