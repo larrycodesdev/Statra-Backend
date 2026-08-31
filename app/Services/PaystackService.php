@@ -30,6 +30,9 @@ class PaystackService
             'plan'         => config('services.paystack.plan_code'),
             'callback_url' => $callbackUrl,
             'currency'     => 'NGN',
+            // Anchor this subscriber's billing cycle to today so recurring charges
+            // happen exactly 30 days from signup, not on the plan's shared anchor date.
+            'start_date'   => now()->toIso8601String(),
         ];
 
         Log::info('Paystack init payload', $payload);
