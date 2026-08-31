@@ -124,22 +124,37 @@ class AuthController extends Controller
             $avatar    = $payload['picture'] ?? null;
 
         } elseif ($data['provider'] === 'google') {
-            // Native mobile Google Sign-In (Android / iOS SDK).
-            // The ID token's `aud` is the mobile OAuth client ID — different from the
-            // web client ID — so we skip the aud check and rely on tokeninfo alone.
-            $response = \Illuminate\Support\Facades\Http::get('https://oauth2.googleapis.com/tokeninfo', [
-                'id_token' => $data['token'],
-            ]);
+            // Mobile Google Sign-In SDK returns either an OAuth access token (opaque)
+            // or a Google ID token (JWT with 3 dot-separated parts). Handle both.
+            $token  = $data['token'];
+            $isJwt  = substr_count($token, '.') === 2;
 
-            if (!$response->successful() || !$response->json('email')) {
-                return ApiResponse::error('Invalid Google token.', 401);
+            if ($isJwt) {
+                // ID token path — verify via Google tokeninfo
+                $response = \Illuminate\Support\Facades\Http::get('https://oauth2.googleapis.com/tokeninfo', [
+                    'id_token' => $token,
+                ]);
+                if (!$response->successful() || !$response->json('email')) {
+                    return ApiResponse::error('Invalid Google token.', 401);
+                }
+                $info      = $response->json();
+                $email     = $info['email'];
+                $firstName = $info['given_name'] ?? ($data['first_name'] ?? '');
+                $lastName  = $info['family_name'] ?? ($data['last_name'] ?? '');
+                $avatar    = $info['picture'] ?? null;
+            } else {
+                // OAuth access token path — verify via Socialite
+                try {
+                    $socialUser = Socialite::driver('google')->stateless()->userFromToken($token);
+                } catch (\Throwable) {
+                    return ApiResponse::error('Invalid Google token.', 401);
+                }
+                $email     = $socialUser->getEmail();
+                $nameParts = explode(' ', $socialUser->getName() ?? '', 2);
+                $firstName = $nameParts[0] ?? '';
+                $lastName  = $nameParts[1] ?? '';
+                $avatar    = $socialUser->getAvatar();
             }
-
-            $info      = $response->json();
-            $email     = $info['email'];
-            $firstName = $info['given_name'] ?? ($data['first_name'] ?? '');
-            $lastName  = $info['family_name'] ?? ($data['last_name'] ?? '');
-            $avatar    = $info['picture'] ?? null;
 
         } elseif ($data['provider'] === 'google_web') {
             // Google One Tap / Sign-In button on website returns an ID token (JWT credential)
@@ -184,7 +199,7 @@ class AuthController extends Controller
             $avatar    = null;
 
         } else {
-            // Socialite path — direct OAuth flow (access token)
+            // Facebook — OAuth access token via Socialite
             try {
                 /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
                 $socialUser = Socialite::driver($data['provider'])->stateless()->userFromToken($data['token']);
