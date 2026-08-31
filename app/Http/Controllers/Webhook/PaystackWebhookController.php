@@ -94,9 +94,13 @@ class PaystackWebhookController extends Controller
             return;
         }
 
-        $nextDate = isset($data['next_payment_date'])
+        $nextBillingAt = isset($data['next_payment_date'])
             ? \Carbon\Carbon::parse($data['next_payment_date'])
             : now()->addMonth();
+
+        // Give the subscriber a full calendar month of access from today,
+        // regardless of Paystack's anchor billing date (which can be shorter).
+        $expiresAt = now()->addMonth();
 
         Subscription::updateOrCreate(
             ['user_id' => $user->id],
@@ -109,8 +113,8 @@ class PaystackWebhookController extends Controller
                 'amount'                     => $data['amount'] ?? config('services.paystack.plan_amount', 1000000),
                 'currency'                   => 'NGN',
                 'starts_at'                  => now(),
-                'expires_at'                 => $nextDate,
-                'next_billing_at'            => $nextDate,
+                'expires_at'                 => $expiresAt,
+                'next_billing_at'            => $nextBillingAt,
             ]
         );
     }
@@ -124,7 +128,7 @@ class PaystackWebhookController extends Controller
             return;
         }
 
-        $nextDate = isset($data['subscription']['next_payment_date'])
+        $nextBillingAt = isset($data['subscription']['next_payment_date'])
             ? \Carbon\Carbon::parse($data['subscription']['next_payment_date'])
             : now()->addMonth();
 
@@ -132,8 +136,8 @@ class PaystackWebhookController extends Controller
             ['user_id' => $user->id],
             [
                 'status'          => 'active',
-                'expires_at'      => $nextDate,
-                'next_billing_at' => $nextDate,
+                'expires_at'      => now()->addMonth(),
+                'next_billing_at' => $nextBillingAt,
             ]
         );
 
