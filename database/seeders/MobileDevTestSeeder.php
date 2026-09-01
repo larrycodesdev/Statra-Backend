@@ -57,7 +57,7 @@ class MobileDevTestSeeder extends Seeder
             ['signal_type' => 'spo2',        'rolling_mean' => 97.2,  'rolling_stddev' => 1.1,  'rolling_variance' => 1.21, 'baseline_confidence' => 'high',   'sample_count' => 240],
             ['signal_type' => 'heart_rate',  'rolling_mean' => 78.0,  'rolling_stddev' => 8.5,  'rolling_variance' => 72.25,'baseline_confidence' => 'high',   'sample_count' => 240],
             ['signal_type' => 'hrv',         'rolling_mean' => 42.0,  'rolling_stddev' => 6.0,  'rolling_variance' => 36.0, 'baseline_confidence' => 'medium', 'sample_count' => 120],
-            ['signal_type' => 'activity',    'rolling_mean' => 3200.0,'rolling_stddev' => 800.0,'rolling_variance' => 640000.0,'baseline_confidence' => 'medium','sample_count' => 120],
+            ['signal_type' => 'steps',        'rolling_mean' => 3200.0,'rolling_stddev' => 800.0,'rolling_variance' => 640000.0,'baseline_confidence' => 'medium','sample_count' => 120],
         ];
 
         foreach ($baselines as $b) {
