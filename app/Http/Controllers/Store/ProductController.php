@@ -14,20 +14,20 @@ class ProductController extends Controller
             'data'    => [
                 'name'           => 'STATRA Band',
                 'description'    => 'Real-time sickle cell monitoring on your wrist. 24/7 biometric data, instant alerts, and direct connection to your care team.',
-                'price'          => 149.00,
-                'original_price' => 199.00,
-                'currency'       => 'USD',
+                'price'          => 85000.00,
+                'original_price' => 85000.00,
+                'currency'       => 'NGN',
                 'plans'          => [
                     [
                         'id'    => 'band_only',
                         'label' => 'Band Only',
-                        'price' => 149.00,
+                        'price' => 85000.00,
                         'note'  => null,
                     ],
                     [
                         'id'    => 'band_care_plan',
                         'label' => 'Band + Care Plan',
-                        'price' => 149.00,
+                        'price' => 85000.00,
                         'note'  => '3 months Care Plan included free',
                     ],
                 ],

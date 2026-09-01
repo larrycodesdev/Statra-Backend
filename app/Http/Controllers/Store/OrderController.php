@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
-    private const UNIT_PRICE = 149.00;
-    private const ORIGINAL   = 199.00;
+    private const UNIT_PRICE = 85000.00;
+    private const ORIGINAL   = 85000.00;
 
     // Human-readable labels for each status step in the tracking timeline
     private const STATUS_LABELS = [
