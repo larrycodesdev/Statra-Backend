@@ -41,7 +41,7 @@ class MobileDevTestSeeder extends Seeder
                 'date_of_birth'        => '1995-04-12',
                 'gender'               => 'female',
                 'condition'            => 'sickle_cell',
-                'calibration_status'   => 'calibrated',
+                'calibration_status'   => 'active',
                 'calibration_start_at' => now()->subDays(30),
                 'age_group'            => 'adult',
             ]
