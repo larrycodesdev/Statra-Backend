@@ -157,11 +157,11 @@ class MobileDevTestSeeder extends Seeder
 
         $symptoms = [
             ['symptom' => 'fatigue',      'severity' => 2, 'severity_label' => 'mild',     'pain_level' => 2, 'mood' => 'okay',    'days_ago' => 1],
-            ['symptom' => 'joint_pain',   'severity' => 4, 'severity_label' => 'moderate', 'pain_level' => 5, 'mood' => 'tired',   'days_ago' => 2],
+            ['symptom' => 'joint_pain',   'severity' => 4, 'severity_label' => 'moderate', 'pain_level' => 5, 'mood' => 'low',     'days_ago' => 2],
             ['symptom' => 'headache',     'severity' => 3, 'severity_label' => 'moderate', 'pain_level' => 4, 'mood' => 'okay',    'days_ago' => 3],
-            ['symptom' => 'chest_pain',   'severity' => 6, 'severity_label' => 'severe',   'pain_level' => 7, 'mood' => 'terrible','days_ago' => 5],
-            ['symptom' => 'fatigue',      'severity' => 3, 'severity_label' => 'moderate', 'pain_level' => 3, 'mood' => 'tired',   'days_ago' => 7],
-            ['symptom' => 'dizziness',    'severity' => 2, 'severity_label' => 'mild',     'pain_level' => 2, 'mood' => 'okay',    'days_ago' => 9],
+            ['symptom' => 'chest_pain',   'severity' => 6, 'severity_label' => 'severe',   'pain_level' => 7, 'mood' => 'low',     'days_ago' => 5],
+            ['symptom' => 'fatigue',      'severity' => 3, 'severity_label' => 'moderate', 'pain_level' => 3, 'mood' => 'low',     'days_ago' => 7],
+            ['symptom' => 'dizziness',    'severity' => 2, 'severity_label' => 'mild',     'pain_level' => 2, 'mood' => 'alright', 'days_ago' => 9],
         ];
 
         foreach ($symptoms as $s) {
