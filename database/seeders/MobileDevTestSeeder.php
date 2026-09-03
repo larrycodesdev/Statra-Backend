@@ -33,14 +33,14 @@ class MobileDevTestSeeder extends Seeder
             ]
         );
 
-        $patient = Patient::firstOrCreate(
+        $patient = Patient::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'genotype'             => 'SS',
                 'blood_type'           => 'O+',
                 'date_of_birth'        => '1995-04-12',
                 'gender'               => 'female',
-                'condition'            => 'sickle_cell',
+                'condition'            => ['sickle_cell'],
                 'calibration_status'   => 'active',
                 'calibration_start_at' => now()->subDays(30),
                 'age_group'            => 'adult',
