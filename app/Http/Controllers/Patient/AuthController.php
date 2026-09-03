@@ -355,6 +355,30 @@ class AuthController extends Controller
         return ApiResponse::success(null, 'Logged out successfully.');
     }
 
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Social-only accounts have no password — skip password check
+        if (!is_null($user->password)) {
+            $data = $request->validate([
+                'password' => ['required', 'string'],
+            ]);
+
+            if (!Hash::check($data['password'], $user->password)) {
+                return ApiResponse::error('Incorrect password.', 403);
+            }
+        }
+
+        // Revoke all tokens so all devices are logged out immediately
+        $user->tokens()->delete();
+
+        // Soft-delete — personal data purged within 30 days per privacy policy
+        $user->delete();
+
+        return ApiResponse::success(null, 'Account deleted. Your data will be permanently purged within 30 days.');
+    }
+
     private function userResource(User $user): array
     {
         return [
@@ -366,8 +390,9 @@ class AuthController extends Controller
             'username'   => $user->username,
             'email'      => $user->email,
             'phone'      => $user->phone,
-            'avatar'     => $user->avatar,
-            'role'       => $user->role,
+            'avatar'      => $user->avatar,
+            'role'        => $user->role,
+            'has_password' => !is_null($user->password),
         ];
     }
 

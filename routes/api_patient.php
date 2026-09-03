@@ -36,6 +36,7 @@ Route::middleware(['auth:sanctum', 'ability:patient', 'patient'])->group(functio
     // Auth
     Route::post('auth/logout',           [AuthController::class, 'logout']);
     Route::put('auth/change-password',   [AuthController::class, 'changePassword']);
+    Route::delete('auth/account',        [AuthController::class, 'deleteAccount']);
 
     // Profile
     Route::get('profile',                          [ProfileController::class, 'show']);
