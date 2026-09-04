@@ -7,6 +7,8 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() !== 'sqlsrv') return;
+
         // SQL Server unique indexes include NULLs, so multiple NULL pids fail.
         // Replace with a filtered index that only enforces uniqueness on non-NULL values.
         DB::statement('DROP INDEX IF EXISTS users_pid_unique ON [users]');
@@ -15,6 +17,8 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'sqlsrv') return;
+
         DB::statement('DROP INDEX IF EXISTS users_pid_unique ON [users]');
         DB::statement('CREATE UNIQUE INDEX users_pid_unique ON [users] (pid)');
     }

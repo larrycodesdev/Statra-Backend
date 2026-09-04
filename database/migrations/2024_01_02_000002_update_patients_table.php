@@ -39,10 +39,11 @@ return new class extends Migration
                             ALTER TABLE [{$table}] DROP CONSTRAINT [{$constraint}]");
             $inList = "N'" . implode("', N'", $values) . "'";
             DB::statement("ALTER TABLE [{$table}] ADD CONSTRAINT [{$constraint}] CHECK ([{$column}] IN ({$inList}))");
-        } else {
-            $enumList  = "'" . implode("','", $values) . "'";
-            $nullStr   = $nullable ? 'NULL' : 'NOT NULL';
+        } elseif ($driver === 'mysql') {
+            $enumList = "'" . implode("','", $values) . "'";
+            $nullStr  = $nullable ? 'NULL' : 'NOT NULL';
             DB::statement("ALTER TABLE `{$table}` MODIFY COLUMN `{$column}` ENUM({$enumList}) {$nullStr}");
         }
+        // SQLite: no enum enforcement — skip
     }
 };

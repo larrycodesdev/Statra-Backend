@@ -1,60 +1,49 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Drop existing role check constraint
-        $constraints = DB::select("
-            SELECT cc.name
-            FROM sys.check_constraints cc
-            JOIN sys.columns c ON cc.parent_object_id = c.object_id AND cc.parent_column_id = c.column_id
-            WHERE cc.parent_object_id = OBJECT_ID(N'users') AND c.name = N'role'
-        ");
-        foreach ($constraints as $constraint) {
-            DB::statement("ALTER TABLE [users] DROP CONSTRAINT [{$constraint->name}]");
+        if (DB::getDriverName() === 'sqlsrv') {
+            // Drop existing role check constraint then expand to include staff roles
+            $constraints = DB::select("
+                SELECT cc.name FROM sys.check_constraints cc
+                JOIN sys.columns c ON cc.parent_object_id = c.object_id AND cc.parent_column_id = c.column_id
+                WHERE cc.parent_object_id = OBJECT_ID(N'users') AND c.name = N'role'
+            ");
+            foreach ($constraints as $constraint) {
+                DB::statement("ALTER TABLE [users] DROP CONSTRAINT [{$constraint->name}]");
+            }
+            DB::statement("ALTER TABLE [users] ADD CONSTRAINT [users_role_check]
+                CHECK ([role] IN ('patient','doctor','checkin_user','admin','staff','superadmin'))");
         }
 
-        // Expand role to include all staff roles
-        DB::statement("
-            ALTER TABLE [users]
-            ADD CONSTRAINT [users_role_check]
-            CHECK ([role] IN ('patient','doctor','checkin_user','admin','staff','superadmin'))
-        ");
+        Schema::table('users', function (Blueprint $table) {
+            $table->unsignedBigInteger('hospital_id')->nullable();
+            $table->string('approval_status', 20)->default('approved');
+            $table->foreign('hospital_id')->references('id')->on('hospitals')->nullOnDelete();
+        });
 
-        // hospital_id — links admin/doctor/staff to their hospital; null for superadmin/patient
-        DB::statement("ALTER TABLE users ADD hospital_id BIGINT NULL");
-        DB::statement("
-            ALTER TABLE users ADD CONSTRAINT users_hospital_id_foreign
-            FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE SET NULL
-        ");
-
-        // approval_status — doctors and staff must be approved by admin before accessing the system
-        DB::statement("ALTER TABLE users ADD approval_status NVARCHAR(20) NOT NULL DEFAULT 'approved'");
-        DB::statement("
-            ALTER TABLE users ADD CONSTRAINT users_approval_status_check
-            CHECK (approval_status IN ('pending','approved','rejected'))
-        ");
-
-        // Set pending for any future doctor/staff registrations via trigger logic (handled in app layer)
-        // Existing users stay 'approved' (default above covers them)
+        if (DB::getDriverName() === 'sqlsrv') {
+            DB::statement("ALTER TABLE users ADD CONSTRAINT users_approval_status_check
+                CHECK (approval_status IN ('pending','approved','rejected'))");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'users_approval_status_check')
-            ALTER TABLE users DROP CONSTRAINT users_approval_status_check");
-        DB::statement("IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'users_hospital_id_foreign')
-            ALTER TABLE users DROP CONSTRAINT users_hospital_id_foreign");
-        DB::statement("IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('users') AND name = 'approval_status')
-            ALTER TABLE users DROP COLUMN approval_status");
-        DB::statement("IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('users') AND name = 'hospital_id')
-            ALTER TABLE users DROP COLUMN hospital_id");
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['hospital_id']);
+            $table->dropColumn(['hospital_id', 'approval_status']);
+        });
 
-        // Restore original role constraint
+        if (DB::getDriverName() !== 'sqlsrv') return;
+
         $constraints = DB::select("
             SELECT cc.name FROM sys.check_constraints cc
             JOIN sys.columns c ON cc.parent_object_id = c.object_id AND cc.parent_column_id = c.column_id

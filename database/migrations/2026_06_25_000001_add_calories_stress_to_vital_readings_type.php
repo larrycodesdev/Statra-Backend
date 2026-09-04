@@ -7,7 +7,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Drop the existing type check constraint (Azure SQL Server)
+        if (DB::getDriverName() !== 'sqlsrv') return;
+
         DB::statement("
             DECLARE @sql NVARCHAR(512)
             SELECT @sql = 'ALTER TABLE vital_readings DROP CONSTRAINT [' + name + ']'
@@ -24,6 +25,8 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'sqlsrv') return;
+
         DB::statement("
             DECLARE @sql NVARCHAR(512)
             SELECT @sql = 'ALTER TABLE vital_readings DROP CONSTRAINT [' + name + ']'

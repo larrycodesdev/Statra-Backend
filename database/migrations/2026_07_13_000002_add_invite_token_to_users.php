@@ -1,21 +1,23 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE users ADD invite_token NVARCHAR(64) NULL");
-        DB::statement("ALTER TABLE users ADD invite_expires_at DATETIME2 NULL");
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('invite_token', 64)->nullable();
+            $table->dateTime('invite_expires_at')->nullable();
+        });
     }
 
     public function down(): void
     {
-        DB::statement("IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('users') AND name = 'invite_token')
-            ALTER TABLE users DROP COLUMN invite_token");
-        DB::statement("IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('users') AND name = 'invite_expires_at')
-            ALTER TABLE users DROP COLUMN invite_expires_at");
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn(['invite_token', 'invite_expires_at']);
+        });
     }
 };

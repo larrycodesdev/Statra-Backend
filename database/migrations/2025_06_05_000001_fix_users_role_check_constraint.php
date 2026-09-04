@@ -7,10 +7,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (DB::getDriverName() !== 'sqlsrv') {
+        if (DB::getDriverName() === 'mysql') {
             DB::statement("ALTER TABLE `users` MODIFY COLUMN `role` ENUM('patient','doctor','checkin_user') NOT NULL");
             return;
         }
+        if (DB::getDriverName() !== 'sqlsrv') return; // SQLite: skip
 
         // Drop every CHECK constraint on the role column (handles any auto-generated names)
         $constraints = DB::select("
@@ -33,10 +34,11 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::getDriverName() !== 'sqlsrv') {
+        if (DB::getDriverName() === 'mysql') {
             DB::statement("ALTER TABLE `users` MODIFY COLUMN `role` ENUM('patient','doctor') NOT NULL");
             return;
         }
+        if (DB::getDriverName() !== 'sqlsrv') return; // SQLite: skip
 
         DB::statement("IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'users_role_check')
             ALTER TABLE [users] DROP CONSTRAINT [users_role_check]");

@@ -1,17 +1,22 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE appointments ADD type NVARCHAR(100) NULL");
+        Schema::table('appointments', function (Blueprint $table) {
+            $table->string('type', 100)->nullable();
+        });
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE appointments DROP COLUMN IF EXISTS type");
+        Schema::table('appointments', function (Blueprint $table) {
+            $table->dropColumn('type');
+        });
     }
 };

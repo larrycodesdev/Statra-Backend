@@ -25,9 +25,10 @@ return new class extends Migration
                             ALTER TABLE [users] DROP CONSTRAINT [{$constraint}]");
             $inList = "N'" . implode("', N'", $values) . "'";
             DB::statement("ALTER TABLE [users] ADD CONSTRAINT [{$constraint}] CHECK ([role] IN ({$inList}))");
-        } else {
+        } elseif ($driver === 'mysql') {
             $enumList = "'" . implode("','", $values) . "'";
             DB::statement("ALTER TABLE `users` MODIFY COLUMN `role` ENUM({$enumList}) NOT NULL");
         }
+        // SQLite: no enum enforcement — skip
     }
 };

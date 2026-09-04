@@ -21,11 +21,12 @@ return new class extends Migration
         });
 
         // Migrate any existing single-contact data from the flat columns
+        $now = DB::getDriverName() === 'sqlsrv' ? 'GETDATE()' : "datetime('now')";
         DB::statement("
             INSERT INTO emergency_contacts (patient_id, name, phone, email, address, relationship, created_at, updated_at)
             SELECT id, emergency_contact_name, emergency_contact_phone,
                    emergency_contact_email, emergency_contact_address, emergency_contact_relationship,
-                   GETDATE(), GETDATE()
+                   {$now}, {$now}
             FROM patients
             WHERE emergency_contact_name IS NOT NULL
               AND emergency_contact_phone IS NOT NULL
