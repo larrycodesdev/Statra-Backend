@@ -21,7 +21,11 @@ return new class extends Migration
         });
 
         // Migrate any existing single-contact data from the flat columns
-        $now = DB::getDriverName() === 'sqlsrv' ? 'GETDATE()' : "datetime('now')";
+        $now = match (DB::getDriverName()) {
+            'sqlsrv' => 'GETDATE()',
+            'sqlite'  => "datetime('now')",
+            default   => 'NOW()',  // pgsql, mysql
+        };
         DB::statement("
             INSERT INTO emergency_contacts (patient_id, name, phone, email, address, relationship, created_at, updated_at)
             SELECT id, emergency_contact_name, emergency_contact_phone,
